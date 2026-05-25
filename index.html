@@ -12,19 +12,37 @@
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
         .win-gradient { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
+        @media print { .no-print { display: none; } }
+        /* Custom Export Modal Style */
+        #export-modal { backdrop-filter: blur(4px); }
     </style>
 </head>
 <body class="antialiased pb-20 bg-slate-900 text-slate-100 dark-mode">
 
-    <!-- Header / Admin -->
-    <nav class="bg-slate-800/80 dark:bg-slate-950/80 border-b border-slate-700 dark:border-slate-800 backdrop-blur-md sticky top-0 z-50 px-4 py-3 transition-colors">
+    <div id="export-modal" class="fixed inset-0 z-[100] hidden flex items-center justify-center bg-slate-950/80 p-4">
+        <div class="bg-slate-900 border border-slate-700 p-6 rounded-3xl max-w-sm w-full shadow-2xl">
+            <h3 class="text-lg font-bold mb-4 text-center">Choose Export Format</h3>
+            <div class="flex flex-col gap-3">
+                <button onclick="executeExport('excel')" class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl transition flex items-center justify-center gap-2">
+                    <i class="fas fa-file-excel"></i> Export to Excel (CSV)
+                </button>
+                <button onclick="executeExport('pdf')" class="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl transition flex items-center justify-center gap-2">
+                    <i class="fas fa-file-pdf"></i> Export to PDF
+                </button>
+                <button onclick="closeExportModal()" class="w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl transition">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <nav class="bg-slate-800/80 dark:bg-slate-950/80 border-b border-slate-700 dark:border-slate-800 backdrop-blur-md sticky top-0 z-50 px-4 py-3 transition-colors no-print">
         <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
             <div class="flex items-center justify-between w-full md:w-auto gap-3">
                 <div class="flex items-center gap-3">
                     <div class="bg-emerald-500 text-slate-950 p-2 rounded-lg font-black text-xl">JA1</div>
                     <h1 class="text-lg font-bold tracking-tight text-slate-100 dark:text-white">Court Command</h1>
                 </div>
-                <!-- Theme Toggle Button -->
                 <button onclick="toggleTheme()" class="bg-slate-700 dark:bg-slate-800 hover:bg-slate-600 dark:hover:bg-slate-700 text-slate-200 dark:text-slate-300 px-3 py-2 rounded-xl transition flex items-center gap-2 text-sm ml-4">
                     <i id="theme-icon" class="fas fa-sun"></i> <span id="theme-text">Light Mode</span>
                 </button>
@@ -40,9 +58,8 @@
 
     <main class="max-w-7xl mx-auto p-4 space-y-8">
         
-        <!-- SECTION 1: LIVE COURTS (TOP) -->
         <section>
-            <div class="flex items-center justify-between mb-4 px-1">
+            <div class="flex items-center justify-between mb-4 px-1 no-print">
                 <h2 class="text-sm font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
                     <span class="relative flex h-2 w-2">
                         <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
@@ -51,6 +68,9 @@
                     Live Courts
                 </h2>
                 <div class="flex gap-2">
+                    <button onclick="downloadSummary()" class="text-xs bg-emerald-600 hover:bg-emerald-700 px-3 py-1.5 rounded-lg font-bold transition text-white">
+                        <i class="fas fa-file-download mr-1"></i> Export Summary
+                    </button>
                     <button onclick="resetAllData()" class="text-xs bg-rose-600 hover:bg-rose-700 px-3 py-1.5 rounded-lg font-bold transition text-white">
                         <i class="fas fa-trash-alt mr-1"></i> Reset System
                     </button>
@@ -60,23 +80,18 @@
                 </div>
             </div>
             <div id="courts-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
-                <!-- Courts injected here -->
-            </div>
+                </div>
         </section>
 
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 no-print">
             
-            <!-- SECTION 2: QUEUE & STAGING (8 COLS) -->
             <div class="lg:col-span-8 space-y-8">
-                <!-- Up Next Deck -->
                 <div>
                     <h3 class="text-sm font-bold uppercase tracking-widest text-slate-400 mb-4 px-1">Up Next Deck</h3>
                     <div id="up-next-container" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <!-- Staged matches here -->
-                    </div>
+                        </div>
                 </div>
 
-                <!-- Control Buttons -->
                 <div class="flex gap-3">
                     <button onclick="autoMatchmake()" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-2xl transition flex items-center justify-center gap-2 shadow-lg shadow-blue-900/20">
                         <i class="fas fa-bolt"></i> Auto Match
@@ -93,15 +108,13 @@
                 </div>
             </div>
 
-            <!-- SECTION 3: ROSTER & STATS (4 COLS) -->
             <div class="lg:col-span-4 space-y-6">
                 <div class="bg-slate-800 dark:bg-slate-950 border border-slate-700 dark:border-slate-800 rounded-3xl p-5 shadow-xl">
                     <h3 class="text-sm font-bold uppercase tracking-widest text-slate-400 mb-4 flex justify-between">
                         Roster & Stats <span id="roster-count" class="text-emerald-500 font-mono">0</span>
                     </h3>
                     <div id="roster-container" class="space-y-3 max-h-[600px] overflow-y-auto custom-scrollbar pr-2">
-                        <!-- Players injected here -->
-                    </div>
+                        </div>
                 </div>
             </div>
 
@@ -117,6 +130,7 @@
         ];
         let waitingQueue = [];
         let upNextDeck = [];
+        let matchHistory = []; // Track completed matches for summary
         let isDarkMode = true;
 
         // --- PERSISTENCE LAYER LOADER ---
@@ -126,7 +140,6 @@
             }
             if (localStorage.getItem('pq_courts')) {
                 courts = JSON.parse(localStorage.getItem('pq_courts'));
-                // Force-clean layout tracking flag so UI boots cleanly
                 courts.forEach(c => c.isEditing = false);
             }
             if (localStorage.getItem('pq_waitingQueue')) {
@@ -134,6 +147,9 @@
             }
             if (localStorage.getItem('pq_upNextDeck')) {
                 upNextDeck = JSON.parse(localStorage.getItem('pq_upNextDeck'));
+            }
+            if (localStorage.getItem('pq_matchHistory')) {
+                matchHistory = JSON.parse(localStorage.getItem('pq_matchHistory'));
             }
             if (localStorage.getItem('pq_isDarkMode')) {
                 isDarkMode = JSON.parse(localStorage.getItem('pq_isDarkMode'));
@@ -146,6 +162,7 @@
             localStorage.setItem('pq_courts', JSON.stringify(courts));
             localStorage.setItem('pq_waitingQueue', JSON.stringify(waitingQueue));
             localStorage.setItem('pq_upNextDeck', JSON.stringify(upNextDeck));
+            localStorage.setItem('pq_matchHistory', JSON.stringify(matchHistory));
             localStorage.setItem('pq_isDarkMode', JSON.stringify(isDarkMode));
         }
 
@@ -160,6 +177,7 @@
             ];
             waitingQueue = [];
             upNextDeck = [];
+            matchHistory = [];
             renderSystem();
         }
 
@@ -251,16 +269,20 @@
                                 <i class="fas fa-minus-circle mr-1"></i> Remove
                             </button>
                             <div class="text-slate-400 font-bold mb-2 uppercase tracking-tight">${c.name}</div>
-                            <button onclick="fillCourtFromStaged(${c.id})" class="text-xs bg-slate-800 dark:bg-slate-900 hover:bg-emerald-500 hover:text-slate-950 px-4 py-2 rounded-xl border border-slate-700 dark:border-slate-800 font-bold transition text-slate-200">Deploy Next Match</button>
+                            <button onclick="fillCourtFromStaged(${c.id})" class="text-xs bg-slate-800 dark:bg-slate-900 hover:bg-emerald-500 hover:text-slate-950 px-4 py-2 rounded-xl border border-slate-700 dark:border-slate-800 font-bold transition text-slate-200">Click Auto Select or Manual Select to start match</button>
                         </div>
                     `;
                 }
 
                 const m = c.currentMatch;
-                const p1 = players.find(p => p.id == m.p1) || { name: 'Unknown', games: 0, wins: 0 };
-                const p2 = players.find(p => p.id == m.p2) || { name: 'Unknown', games: 0, wins: 0 };
-                const p3 = players.find(p => p.id == m.p3) || { name: 'Unknown', games: 0, wins: 0 };
-                const p4 = players.find(p => p.id == m.p4) || { name: 'Unknown', games: 0, wins: 0 };
+                const p1 = players.find(p => p.id == m.p1) || { name: 'Unknown' };
+                const p2 = players.find(p => p.id == m.p2) || { name: 'Unknown' };
+                const p3 = players.find(p => p.id == m.p3) || { name: 'Unknown' };
+                const p4 = players.find(p => p.id == m.p4) || { name: 'Unknown' };
+
+                const durationMs = Date.now() - m.startTime;
+                const durationMin = Math.floor(durationMs / 60000);
+                const durationSec = Math.floor((durationMs % 60000) / 1000);
 
                 if (c.isEditing) {
                     const currentMatchIds = [m.p1, m.p2, m.p3, m.p4];
@@ -270,7 +292,7 @@
                                 <span class="text-xs font-bold text-blue-500 flex items-center gap-1.5">
                                     <i class="fas fa-user-edit"></i> EDITING ${c.name.toUpperCase()}
                                 </span>
-                                <button onclick="toggleCourtEdit(${c.id}, false)" class="text-slate-400 hover:text-slate-200 text-xs"><i class="fas fa-times"></i> Close</button>
+                                <button onclick="toggleTheme()" class="text-slate-400 hover:text-slate-200 text-xs"><i class="fas fa-times"></i> Close</button>
                             </div>
                             
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -318,7 +340,7 @@
                 return `
                     <div class="${cardBg} border border-blue-500/30 rounded-3xl overflow-hidden shadow-xl flex flex-col justify-between min-h-[220px]">
                         <div class="bg-blue-500/10 px-4 py-2 border-b border-blue-500/20 flex justify-between items-center">
-                            <span class="text-xs font-bold text-blue-500">${c.name.toUpperCase()} • IN PLAY</span>
+                            <span class="text-xs font-bold text-blue-500">${c.name.toUpperCase()} • IN PLAY (<span class="font-mono">${durationMin}:${durationSec.toString().padStart(2,'0')}</span>)</span>
                             <button onclick="toggleCourtEdit(${c.id}, true)" class="text-[10px] bg-slate-800 dark:bg-slate-900 hover:bg-slate-700 px-2 py-1 rounded border border-slate-600 dark:border-slate-700 transition text-slate-200">
                                 <i class="fas fa-user-edit mr-1"></i> Change / Auto Replace
                             </button>
@@ -369,7 +391,15 @@
         function addPlayer() {
             const inp = document.getElementById('newPlayerName');
             if (!inp.value.trim()) return;
-            const p = { id: Date.now(), name: inp.value.trim(), status: 'Available', wins: 0, games: 0, justPlayed: false };
+            const p = { 
+                id: Date.now(), 
+                name: inp.value.trim(), 
+                status: 'Available', 
+                wins: 0, 
+                games: 0, 
+                justPlayed: false,
+                queuedAt: null // Track when they enter queue
+            };
             players.push(p);
             inp.value = '';
             sendToQueue(p.id);
@@ -378,6 +408,7 @@
         function sendToQueue(id) {
             const p = players.find(x => x.id == id);
             p.status = 'Queued';
+            p.queuedAt = Date.now(); // Start wait timer
             waitingQueue.push(id);
             saveToStorage();
             renderSystem();
@@ -436,11 +467,21 @@
             if (upNextDeck.length === 0) return;
             const c = courts.find(x => x.id == cId);
             const m = upNextDeck.shift();
+            
+            // Calculate wait times for reporting
+            let matchWaitSummary = [];
             [m.p1, m.p2, m.p3, m.p4].forEach(id => {
                 const p = players.find(x => x.id == id);
-                if(p) p.status = 'Playing';
+                if(p) {
+                    const waitMs = Date.now() - (p.queuedAt || Date.now());
+                    matchWaitSummary.push({ name: p.name, waitTime: Math.round(waitMs / 60000) });
+                    p.status = 'Playing';
+                }
             });
+
             c.status = 'Occupied';
+            m.startTime = Date.now(); // Start match timer
+            m.waitLog = matchWaitSummary; // Attach wait log to match data
             c.currentMatch = m;
             saveToStorage();
             renderSystem();
@@ -449,9 +490,23 @@
         function resolveMatch(cId, winner) {
             const c = courts.find(x => x.id == cId);
             const m = c.currentMatch;
-            const team1 = [parseInt(m.p1), parseInt(m.p2)];
-            const team2 = [parseInt(m.p3), parseInt(m.p4)];
-            const activeMatchIds = [...team1, ...team2];
+            const team1Ids = [parseInt(m.p1), parseInt(m.p2)];
+            const team2Ids = [parseInt(m.p3), parseInt(m.p4)];
+            const activeMatchIds = [...team1Ids, ...team2Ids];
+
+            const durationMin = Math.round((Date.now() - m.startTime) / 60000);
+            
+            // Record to history before clearing
+            matchHistory.push({
+                timestamp: new Date().toLocaleTimeString(),
+                court: c.name,
+                team1: team1Ids.map(id => players.find(p => p.id == id)?.name).join(' & '),
+                team2: team2Ids.map(id => players.find(p => p.id == id)?.name).join(' & '),
+                winner: winner === 1 ? 'Team 1' : 'Team 2',
+                duration: durationMin,
+                playerWaits: m.waitLog.map(l => `${l.name}: ${l.waitTime}m`).join('; '),
+                waitData: m.waitLog // Keep object for analysis
+            });
 
             players.forEach(p => {
                 if (!activeMatchIds.includes(p.id)) {
@@ -463,11 +518,12 @@
                 const p = players.find(x => x.id == id);
                 if (!p) return;
                 p.games++;
-                if (winner === 1 && team1.includes(id)) p.wins++;
-                if (winner === 2 && team2.includes(id)) p.wins++;
+                if (winner === 1 && team1Ids.includes(id)) p.wins++;
+                if (winner === 2 && team2Ids.includes(id)) p.wins++;
                 
                 p.status = 'Queued';
                 p.justPlayed = true; 
+                p.queuedAt = Date.now(); // Reset wait timer for next game
                 waitingQueue.push(id);
             });
 
@@ -527,7 +583,11 @@
             oldIds.forEach(id => {
                 if (!newIds.includes(id)) {
                     const p = players.find(x => x.id == id);
-                    if (p) p.status = 'Available'; 
+                    if (p) {
+                        p.status = 'Queued'; 
+                        p.queuedAt = Date.now();
+                        waitingQueue.push(id);
+                    }
                 }
             });
 
@@ -627,6 +687,7 @@
                     const p = players.find(x => x.id == id);
                     if (p) {
                         p.status = 'Queued';
+                        p.queuedAt = Date.now();
                         waitingQueue.push(id);
                     }
                 });
@@ -636,10 +697,110 @@
             renderSystem();
         }
 
+        // --- UPDATED EXPORT FUNCTIONS ---
+        function downloadSummary() {
+            if (matchHistory.length === 0 && players.length === 0) return alert("No data to export.");
+            document.getElementById('export-modal').classList.remove('hidden');
+        }
+
+        function closeExportModal() {
+            document.getElementById('export-modal').classList.add('hidden');
+        }
+
+        function executeExport(type) {
+            closeExportModal();
+            const exportDate = new Date().toLocaleDateString();
+            
+            // Calculate Average Waiting Times
+            let waitMap = {};
+            matchHistory.forEach(h => {
+                if (h.waitData) {
+                    h.waitData.forEach(pWait => {
+                        if (!waitMap[pWait.name]) waitMap[pWait.name] = { total: 0, count: 0 };
+                        waitMap[pWait.name].total += pWait.waitTime;
+                        waitMap[pWait.name].count += 1;
+                    });
+                }
+            });
+            
+            const waitAverages = Object.keys(waitMap).map(name => ({
+                name,
+                avg: Math.round(waitMap[name].total / waitMap[name].count)
+            })).sort((a,b) => b.avg - a.avg);
+
+            if (type === 'excel') {
+                let csvRows = [];
+                csvRows.push(`Open Play (${exportDate}) Summary`);
+                csvRows.push(`Exported at: ${new Date().toLocaleString()}`);
+                csvRows.push("");
+                
+                csvRows.push("PLAYER ROSTER & STATS");
+                csvRows.push("Name,Games Played,Wins,Losses,Win Rate (%)");
+                players.sort((a,b) => getWinRate(b) - getWinRate(a)).forEach(p => {
+                    csvRows.push(`"${p.name}",${p.games},${p.wins},${p.games-p.wins},${getWinRate(p)}%`);
+                });
+                csvRows.push("");
+
+                csvRows.push("AVERAGE WAITING TIME ANALYSIS");
+                csvRows.push("Player Name,Avg Wait (min)");
+                waitAverages.forEach(w => csvRows.push(`"${w.name}",${w.avg}`));
+                csvRows.push("");
+
+                csvRows.push("COMPLETE MATCH LOG");
+                csvRows.push("Time,Court,Team 1,Team 2,Winner,Duration (min)");
+                matchHistory.forEach(h => {
+                    csvRows.push(`"${h.timestamp}","${h.court}","${h.team1}","${h.team2}","${h.winner}",${h.duration}`);
+                });
+
+                const csvString = csvRows.join("\n");
+                const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement("a");
+                link.setAttribute("href", URL.createObjectURL(blob));
+                link.setAttribute("download", `PickleQ_${exportDate.replace(/\//g,'-')}.csv`);
+                link.click();
+            } else {
+                const printWindow = window.open('', '_blank');
+                let html = `<html><head><title>Summary ${exportDate}</title><style>
+                    body { font-family: sans-serif; padding: 20px; color: #333; }
+                    table { width: 100%; border-collapse: collapse; margin-bottom: 25px; }
+                    th, td { border: 1px solid #ddd; padding: 6px; text-align: left; font-size: 11px; }
+                    th { background-color: #f8fafc; color: #64748b; text-transform: uppercase; }
+                    h2 { color: #059669; border-bottom: 2px solid #059669; padding-bottom: 5px; font-size: 16px; }
+                </style></head><body>`;
+                
+                html += `<h1>Open Play (${exportDate}) Summary</h1><p>Generated: ${new Date().toLocaleString()}</p>`;
+                
+                html += `<h2>Player Leaderboard</h2><table><thead><tr><th>Name</th><th>Games</th><th>Wins</th><th>Winrate</th></tr></thead><tbody>`;
+                players.sort((a,b) => getWinRate(b) - getWinRate(a)).forEach(p => {
+                    html += `<tr><td>${p.name}</td><td>${p.games}</td><td>${p.wins}</td><td>${getWinRate(p)}%</td></tr>`;
+                });
+                html += `</tbody></table>`;
+
+                html += `<h2>Average Wait Times</h2><table><thead><tr><th>Player Name</th><th>Avg Minutes Waiting Per Match</th></tr></thead><tbody>`;
+                waitAverages.forEach(w => html += `<tr><td>${w.name}</td><td>${w.avg} min</td></tr>`);
+                html += `</tbody></table>`;
+
+                html += `<h2>Match History</h2><table><thead><tr><th>Time</th><th>Court</th><th>Matchup</th><th>Winner</th><th>Dur</th></tr></thead><tbody>`;
+                matchHistory.forEach(h => {
+                    html += `<tr><td>${h.timestamp}</td><td>${h.court}</td><td>${h.team1} vs ${h.team2}</td><td>${h.winner}</td><td>${h.duration}m</td></tr>`;
+                });
+                html += `</tbody></table></body></html>`;
+                
+                printWindow.document.write(html);
+                printWindow.document.close();
+                setTimeout(() => printWindow.print(), 500);
+            }
+        }
+
         // --- LIFE-CYCLE INIT ---
         loadFromStorage();
         applyThemeClasses();
         renderSystem();
+
+        // Live seconds and minute counts (Updates every 1000ms)
+        setInterval(renderCourts, 1000);
+        // Refresh Roster every 30 seconds for state syncing
+        setInterval(renderRoster, 30000);
     </script>
 </body>
 </html>
