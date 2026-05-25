@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PickleQ | Pro Court Manager</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght=400;600;700;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; transition: background-color 0.3s ease, color 0.3s ease; }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+        .win-gradient { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
+    </style>
+</head>
+<body class="antialiased pb-20 bg-slate-900 text-slate-100 dark-mode">
+
+    <!-- Header / Admin -->
+    <nav class="bg-slate-800/80 dark:bg-slate-950/80 border-b border-slate-700 dark:border-slate-800 backdrop-blur-md sticky top-0 z-50 px-4 py-3 transition-colors">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center justify-between w-full md:w-auto gap-3">
+                <div class="flex items-center gap-3">
+                    <div class="bg-emerald-500 text-slate-950 p-2 rounded-lg font-black text-xl">JA1</div>
+                    <h1 class="text-lg font-bold tracking-tight text-slate-100 dark:text-white">Court Command</h1>
+                </div>
+                <!-- Theme Toggle Button -->
+                <button onclick="toggleTheme()" class="bg-slate-700 dark:bg-slate-800 hover:bg-slate-600 dark:hover:bg-slate-700 text-slate-200 dark:text-slate-300 px-3 py-2 rounded-xl transition flex items-center gap-2 text-sm ml-4">
+                    <i id="theme-icon" class="fas fa-sun"></i> <span id="theme-text">Light Mode</span>
+                </button>
+            </div>
+            <div class="flex gap-2 w-full md:w-auto">
+                <input id="newPlayerName" type="text" placeholder="New Player Name/Number..." class="flex-1 md:w-48 bg-slate-700 dark:bg-slate-800 border border-slate-600 dark:border-slate-700 rounded-xl px-4 py-2 text-sm text-slate-100 focus:ring-2 focus:ring-emerald-500 outline-none">
+                <button onclick="addPlayer()" class="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold px-4 py-2 rounded-xl transition text-sm flex items-center gap-2 whitespace-nowrap">
+                    <i class="fas fa-plus"></i> Add Player
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto p-4 space-y-8">
+        
+        <!-- SECTION 1: LIVE COURTS (TOP) -->
+        <section>
+            <div class="flex items-center justify-between mb-4 px-1">
+                <h2 class="text-sm font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                    <span class="relative flex h-2 w-2">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                    </span>
+                    Live Courts
+                </h2>
+                <button onclick="addCourt()" class="text-xs bg-slate-800 dark:bg-slate-950 hover:bg-slate-700 dark:hover:bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-700 dark:border-slate-800 transition text-slate-200">
+                    + Add Court
+                </button>
+            </div>
+            <div id="courts-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
+                <!-- Courts injected here -->
+            </div>
+        </section>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            
+            <!-- SECTION 2: QUEUE & STAGING (8 COLS) -->
+            <div class="lg:col-span-8 space-y-8">
+                <!-- Up Next Deck -->
+                <div>
+                    <h3 class="text-sm font-bold uppercase tracking-widest text-slate-400 mb-4 px-1">Up Next Deck</h3>
+                    <div id="up-next-container" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <!-- Staged matches here -->
+                    </div>
+                </div>
+
+                <!-- Control Buttons -->
+                <div class="flex gap-3">
+                    <button onclick="autoMatchmake()" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-2xl transition flex items-center justify-center gap-2 shadow-lg shadow-blue-900/20">
+                        <i class="fas fa-bolt"></i> Auto Match
+                    </button>
+                    <button onclick="toggleManualCreator()" class="flex-1 bg-slate-800 dark:bg-slate-950 hover:bg-slate-700 dark:hover:bg-slate-900 text-slate-200 border border-slate-700 dark:border-slate-800 font-bold py-3 rounded-2xl transition flex items-center justify-center gap-2">
+                        <i class="fas fa-hand-pointer"></i> Manual Select
+                    </button>
+                </div>
+
+                <div id="manual-creator" class="hidden bg-slate-800 dark:bg-slate-950 border border-slate-700 dark:border-slate-800 p-4 rounded-2xl">
+                    <p class="text-xs text-slate-400 mb-3">Select exactly 4 available players:</p>
+                    <div id="manual-selector-grid" class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4"></div>
+                    <button onclick="createManualMatch()" class="w-full bg-emerald-500 text-slate-950 font-bold py-2 rounded-xl">Confirm Match</button>
+                </div>
+            </div>
+
+            <!-- SECTION 3: ROSTER & STATS (4 COLS) -->
+            <div class="lg:col-span-4 space-y-6">
+                <div class="bg-slate-800 dark:bg-slate-950 border border-slate-700 dark:border-slate-800 rounded-3xl p-5 shadow-xl">
+                    <h3 class="text-sm font-bold uppercase tracking-widest text-slate-400 mb-4 flex justify-between">
+                        Roster & Stats <span id="roster-count" class="text-emerald-500 font-mono">0</span>
+                    </h3>
+                    <div id="roster-container" class="space-y-3 max-h-[600px] overflow-y-auto custom-scrollbar pr-2">
+                        <!-- Players injected here -->
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+        // No default simulated players on boot
+        let players = [];
+
+        let courts = [
+            { id: 1, name: "Court 1", status: "Available", currentMatch: null, isEditing: false },
+            { id: 2, name: "Court 2", status: "Available", currentMatch: null, isEditing: false }
+        ];
+
+        let waitingQueue = [];
+        let upNextDeck = [];
+        let isDarkMode = true;
+
+        function getWinRate(p) {
+            return p.games === 0 ? 0 : Math.round((p.wins / p.games) * 100);
+        }
+
+        function toggleTheme() {
+            isDarkMode = !isDarkMode;
+            const body = document.body;
+            const themeIcon = document.getElementById('theme-icon');
+            const themeText = document.getElementById('theme-text');
+
+            if (isDarkMode) {
+                body.className = "antialiased pb-20 bg-slate-900 text-slate-100 dark-mode";
+                themeIcon.className = "fas fa-sun";
+                themeText.innerText = "Light Mode";
+            } else {
+                body.className = "antialiased pb-20 bg-slate-50 text-slate-900 light-mode";
+                themeIcon.className = "fas fa-moon";
+                themeText.innerText = "Dark Mode";
+            }
+            renderSystem();
+        }
+
+        function renderSystem() {
+            renderCourts();
+            renderRoster();
+            renderUpNext();
+            populateManualSelector();
+        }
+
+        function renderRoster() {
+            const container = document.getElementById('roster-container');
+            document.getElementById('roster-count').innerText = players.length;
+            
+            if (players.length === 0) {
+                container.innerHTML = `<div class="text-xs text-slate-500 italic text-center py-4">No players registered. Add players above.</div>`;
+                return;
+            }
+
+            const themeCardBg = isDarkMode ? "bg-slate-800/50 border-slate-700/50" : "bg-white border-slate-200 shadow-sm";
+            const themeTextMain = isDarkMode ? "text-slate-200" : "text-slate-800";
+            const themeTextBadges = isDarkMode ? "bg-slate-700 text-slate-400" : "bg-slate-200 text-slate-600";
+
+            container.innerHTML = players.sort((a,b) => b.id - a.id).sort((a,b) => getWinRate(b) - getWinRate(a)).map(p => `
+                <div class="${themeCardBg} border p-3 rounded-2xl flex justify-between items-center">
+                    <div>
+                        <div class="font-bold text-sm ${themeTextMain}">
+                            ${p.name} 
+                            <span class="text-[10px] ${themeTextBadges} px-1.5 py-0.5 rounded font-normal ml-1">${p.status}</span>
+                            ${p.justPlayed ? `<span class="text-[9px] bg-amber-500/10 border border-amber-500/30 text-amber-500 px-1.5 py-0.5 rounded font-normal ml-1">Just Played</span>` : ''}
+                        </div>
+                        <div class="text-[10px] text-slate-400 uppercase font-bold mt-0.5">
+                            ${p.wins}W / ${p.games - p.wins}L • <span class="text-emerald-500">${getWinRate(p)}% Winrate</span>
+                        </div>
+                        <div class="text-[9px] text-slate-500 font-mono">Played: ${p.games} games</div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        ${p.status === 'Available' ? `<button onclick="sendToQueue(${p.id})" class="bg-emerald-500/10 text-emerald-500 p-2 rounded-lg text-xs hover:bg-emerald-500 hover:text-slate-950 transition"><i class="fas fa-plus"></i></button>` : ''}
+                        <button onclick="removePlayer(${p.id})" class="text-slate-400 hover:text-rose-500 transition"><i class="fas fa-trash"></i></button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderCourts() {
+            const container = document.getElementById('courts-grid');
+            
+            if(courts.length === 0) {
+                container.innerHTML = `<div class="col-span-full text-center text-xs p-8 border-2 border-dashed border-slate-700 rounded-3xl text-slate-500">No courts configured. Click "+ Add Court" to expand.</div>`;
+                return;
+            }
+
+            const cardBg = isDarkMode ? "bg-slate-950 border-slate-800" : "bg-white border-slate-200 shadow-md";
+            const innerSectionBg = isDarkMode ? "bg-slate-900/60 border-slate-800" : "bg-slate-50 border-slate-100";
+            const textMain = isDarkMode ? "text-slate-200" : "text-slate-800";
+
+            container.innerHTML = courts.map(c => {
+                if (c.status === 'Available') {
+                    return `
+                        <div class="${cardBg} border-2 border-dashed p-6 rounded-3xl flex flex-col items-center justify-center min-h-[220px] relative">
+                            <button onclick="removeCourt(${c.id})" class="absolute top-3 right-3 text-xs bg-slate-800 dark:bg-slate-900 hover:bg-rose-900 hover:text-white border border-slate-700 rounded-lg p-1.5 px-2 transition text-slate-400">
+                                <i class="fas fa-minus-circle mr-1"></i> Remove
+                            </button>
+                            <div class="text-slate-400 font-bold mb-2 uppercase tracking-tight">${c.name}</div>
+                            <button onclick="fillCourtFromStaged(${c.id})" class="text-xs bg-slate-800 dark:bg-slate-900 hover:bg-emerald-500 hover:text-slate-950 px-4 py-2 rounded-xl border border-slate-700 dark:border-slate-800 font-bold transition text-slate-200">Deploy Next Match</button>
+                        </div>
+                    `;
+                }
+
+                const m = c.currentMatch;
+                const p1 = players.find(p => p.id == m.p1) || { name: 'Unknown', games: 0, wins: 0 };
+                const p2 = players.find(p => p.id == m.p2) || { name: 'Unknown', games: 0, wins: 0 };
+                const p3 = players.find(p => p.id == m.p3) || { name: 'Unknown', games: 0, wins: 0 };
+                const p4 = players.find(p => p.id == m.p4) || { name: 'Unknown', games: 0, wins: 0 };
+
+                // INLINE MANAGEMENT PANEL RENDER LOGIC
+                if (c.isEditing) {
+                    const currentMatchIds = [m.p1, m.p2, m.p3, m.p4];
+                    return `
+                        <div class="${cardBg} border-2 border-blue-500/50 rounded-3xl overflow-hidden shadow-2xl p-4 space-y-4">
+                            <div class="flex justify-between items-center border-b border-slate-700 dark:border-slate-800 pb-2">
+                                <span class="text-xs font-bold text-blue-500 flex items-center gap-1.5">
+                                    <i class="fas fa-user-edit"></i> EDITING ${c.name.toUpperCase()}
+                                </span>
+                                <button onclick="toggleCourtEdit(${c.id}, false)" class="text-slate-400 hover:text-slate-200 text-xs"><i class="fas fa-times"></i> Close</button>
+                            </div>
+                            
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div class="${innerSectionBg} p-2.5 rounded-xl border space-y-2">
+                                    <div class="text-[9px] font-black text-emerald-500 tracking-wider uppercase">Team 1 Options</div>
+                                    <div>
+                                        <div class="flex gap-1">
+                                            <select id="edit-${c.id}-p1" class="w-full bg-slate-800 border border-slate-600 p-1.5 rounded-lg text-xs outline-none text-white">${genOptions(m.p1, currentMatchIds)}</select>
+                                            <button onclick="triggerInlineAutoReplace(${c.id}, 'edit-${c.id}-p1')" type="button" class="bg-blue-600/20 text-blue-400 border border-blue-500/30 hover:bg-blue-600 hover:text-white px-2 rounded-lg text-[10px] font-bold transition"><i class="fas fa-magic"></i></button>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div class="flex gap-1">
+                                            <select id="edit-${c.id}-p2" class="w-full bg-slate-800 border border-slate-600 p-1.5 rounded-lg text-xs outline-none text-white">${genOptions(m.p2, currentMatchIds)}</select>
+                                            <button onclick="triggerInlineAutoReplace(${c.id}, 'edit-${c.id}-p2')" type="button" class="bg-blue-600/20 text-blue-400 border border-blue-500/30 hover:bg-blue-600 hover:text-white px-2 rounded-lg text-[10px] font-bold transition"><i class="fas fa-magic"></i></button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="${innerSectionBg} p-2.5 rounded-xl border space-y-2">
+                                    <div class="text-[9px] font-black text-blue-500 tracking-wider uppercase">Team 2 Options</div>
+                                    <div>
+                                        <div class="flex gap-1">
+                                            <select id="edit-${c.id}-p3" class="w-full bg-slate-800 border border-slate-600 p-1.5 rounded-lg text-xs outline-none text-white">${genOptions(m.p3, currentMatchIds)}</select>
+                                            <button onclick="triggerInlineAutoReplace(${c.id}, 'edit-${c.id}-p3')" type="button" class="bg-blue-600/20 text-blue-400 border border-blue-500/30 hover:bg-blue-600 hover:text-white px-2 rounded-lg text-[10px] font-bold transition"><i class="fas fa-magic"></i></button>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div class="flex gap-1">
+                                            <select id="edit-${c.id}-p4" class="w-full bg-slate-800 border border-slate-600 p-1.5 rounded-lg text-xs outline-none text-white">${genOptions(m.p4, currentMatchIds)}</select>
+                                            <button onclick="triggerInlineAutoReplace(${c.id}, 'edit-${c.id}-p4')" type="button" class="bg-blue-600/20 text-blue-400 border border-blue-500/30 hover:bg-blue-600 hover:text-white px-2 rounded-lg text-[10px] font-bold transition"><i class="fas fa-magic"></i></button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="flex gap-2 pt-1">
+                                <button onclick="toggleCourtEdit(${c.id}, false)" class="flex-1 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-bold rounded-lg transition">Cancel</button>
+                                <button onclick="saveInlineMatchEdits(${c.id})" class="flex-1 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-slate-950 text-xs font-bold rounded-lg transition">Apply changes</button>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                // LIVE OCCUPIED VIEW
+                return `
+                    <div class="${cardBg} border border-blue-500/30 rounded-3xl overflow-hidden shadow-xl flex flex-col justify-between min-h-[220px]">
+                        <div class="bg-blue-500/10 px-4 py-2 border-b border-blue-500/20 flex justify-between items-center">
+                            <span class="text-xs font-bold text-blue-500">${c.name.toUpperCase()} • IN PLAY</span>
+                            <button onclick="toggleCourtEdit(${c.id}, true)" class="text-[10px] bg-slate-800 dark:bg-slate-900 hover:bg-slate-700 px-2 py-1 rounded border border-slate-600 dark:border-slate-700 transition text-slate-200">
+                                <i class="fas fa-user-edit mr-1"></i> Change / Auto Replace
+                            </button>
+                        </div>
+                        <div class="p-4 grid grid-cols-2 gap-4 flex-1">
+                            <div class="space-y-1">
+                                <div class="text-[9px] font-black text-emerald-500 tracking-wider">TEAM 1</div>
+                                <div class="text-xs font-bold truncate ${textMain}">${p1.name} <span class="text-[10px] text-slate-400">(${getWinRate(p1)}%)</span></div>
+                                <div class="text-xs font-bold truncate ${textMain}">${p2.name} <span class="text-[10px] text-slate-400">(${getWinRate(p2)}%)</span></div>
+                            </div>
+                            <div class="space-y-1 border-l border-slate-700 dark:border-slate-800 pl-3">
+                                <div class="text-[9px] font-black text-blue-500 tracking-wider">TEAM 2</div>
+                                <div class="text-xs font-bold truncate ${textMain}">${p3.name} <span class="text-[10px] text-slate-400">(${getWinRate(p3)}%)</span></div>
+                                <div class="text-xs font-bold truncate ${textMain}">${p4.name} <span class="text-[10px] text-slate-400">(${getWinRate(p4)}%)</span></div>
+                            </div>
+                        </div>
+                        <div class="p-4 pt-0 grid grid-cols-2 gap-2">
+                            <button onclick="resolveMatch(${c.id}, 1)" class="win-gradient text-slate-950 font-black text-[10px] py-2 rounded-xl uppercase tracking-wider">T1 Wins</button>
+                            <button onclick="resolveMatch(${c.id}, 2)" class="win-gradient text-slate-950 font-black text-[10px] py-2 rounded-xl uppercase tracking-wider">T2 Wins</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderUpNext() {
+            const container = document.getElementById('up-next-container');
+            if (upNextDeck.length === 0) {
+                container.innerHTML = `<div class="col-span-full text-xs text-slate-500 italic py-4 text-center">Staging zone empty. Run auto-match or manually pair combinations below.</div>`;
+                return;
+            }
+
+            const themeBg = isDarkMode ? "bg-slate-950/40 border-slate-800" : "bg-white border-slate-200 shadow-sm";
+
+            container.innerHTML = upNextDeck.map((m, idx) => `
+                <div class="${themeBg} border p-4 rounded-2xl flex justify-between items-center">
+                    <div>
+                        <div class="text-[10px] font-bold text-amber-500 mb-1">STAGED #${idx+1}</div>
+                        <div class="text-[11px] text-slate-400 dark:text-slate-300">
+                            ${(players.find(p => p.id == m.p1) || {}).name} + ${(players.find(p => p.id == m.p2) || {}).name} <span class="text-slate-500 font-bold">vs</span> ${(players.find(p => p.id == m.p3) || {}).name} + ${(players.find(p => p.id == m.p4) || {}).name}
+                        </div>
+                    </div>
+                    <button onclick="dismissStaged(${m.id})" class="text-rose-500 text-xs px-2"><i class="fas fa-times"></i></button>
+                </div>
+            `).join('');
+        }
+
+        function addPlayer() {
+            const inp = document.getElementById('newPlayerName');
+            if (!inp.value.trim()) return;
+            const p = { id: Date.now(), name: inp.value.trim(), status: 'Available', wins: 0, games: 0, justPlayed: false };
+            players.push(p);
+            inp.value = '';
+            sendToQueue(p.id);
+        }
+
+        function sendToQueue(id) {
+            const p = players.find(x => x.id == id);
+            p.status = 'Queued';
+            waitingQueue.push(id);
+            renderSystem();
+        }
+
+        function autoMatchmake() {
+            if (waitingQueue.length < 4) return alert("Need at least 4 players in queue");
+
+            let queuePool = waitingQueue.map(id => players.find(p => p.id === id));
+            let freshPlayers = queuePool.filter(p => !p.justPlayed);
+            let tiredPlayers = queuePool.filter(p => p.justPlayed);
+
+            freshPlayers.sort((a, b) => a.games - b.games);
+            tiredPlayers.sort((a, b) => a.games - b.games);
+
+            let primarySourcePool = freshPlayers.length >= 4 ? freshPlayers : [...freshPlayers, ...tiredPlayers];
+            if (primarySourcePool.length < 4) return alert("Insufficient pool assets.");
+
+            let interleavedPool = [];
+            let stride = Math.floor(primarySourcePool.length / 4) || 1;
+
+            let chosenIndices = [];
+            for (let i = 0; i < 4; i++) {
+                let targetIdx = i * stride;
+                while (targetIdx >= primarySourcePool.length || chosenIndices.includes(targetIdx)) {
+                    targetIdx = (targetIdx + 1) % primarySourcePool.length;
+                }
+                chosenIndices.push(targetIdx);
+                interleavedPool.push(primarySourcePool[targetIdx]);
+            }
+
+            const selectedIds = interleavedPool.map(p => p.id);
+            waitingQueue = waitingQueue.filter(id => !selectedIds.includes(id));
+            interleavedPool.forEach(p => p.status = 'Staged');
+            interleavedPool.sort((a, b) => getWinRate(b) - getWinRate(a));
+
+            upNextDeck.push({ 
+                id: Date.now(), 
+                p1: interleavedPool[0].id, 
+                p2: interleavedPool[3].id, 
+                p3: interleavedPool[1].id, 
+                p4: interleavedPool[2].id 
+            });
+
+            renderSystem();
+            processPipeline();
+        }
+
+        function processPipeline() {
+            const c = courts.find(x => x.status === 'Available');
+            if (c && upNextDeck.length > 0) fillCourtFromStaged(c.id);
+        }
+
+        function fillCourtFromStaged(cId) {
+            if (upNextDeck.length === 0) return;
+            const c = courts.find(x => x.id == cId);
+            const m = upNextDeck.shift();
+            [m.p1, m.p2, m.p3, m.p4].forEach(id => {
+                const p = players.find(x => x.id == id);
+                if(p) p.status = 'Playing';
+            });
+            c.status = 'Occupied';
+            c.currentMatch = m;
+            renderSystem();
+        }
+
+        function resolveMatch(cId, winner) {
+            const c = courts.find(x => x.id == cId);
+            const m = c.currentMatch;
+            const team1 = [parseInt(m.p1), parseInt(m.p2)];
+            const team2 = [parseInt(m.p3), parseInt(m.p4)];
+            const activeMatchIds = [...team1, ...team2];
+
+            players.forEach(p => {
+                if (!activeMatchIds.includes(p.id)) {
+                    p.justPlayed = false;
+                }
+            });
+
+            activeMatchIds.forEach(id => {
+                const p = players.find(x => x.id == id);
+                if (!p) return;
+                p.games++;
+                if (winner === 1 && team1.includes(id)) p.wins++;
+                if (winner === 2 && team2.includes(id)) p.wins++;
+                
+                p.status = 'Queued';
+                p.justPlayed = true; 
+                waitingQueue.push(id);
+            });
+
+            c.status = 'Available';
+            c.currentMatch = null;
+            c.isEditing = false;
+            processPipeline();
+            renderSystem();
+        }
+
+        // CONTROL TOGGLE FOR THE INLINE FORMS
+        function toggleCourtEdit(cId, showState) {
+            const c = courts.find(x => x.id == cId);
+            if(c) c.isEditing = showState;
+            renderSystem();
+        }
+
+        function triggerInlineAutoReplace(courtId, selectElementId) {
+            if (waitingQueue.length === 0) return alert("The waiting queue is empty.");
+            let queuePool = waitingQueue.map(id => players.find(p => p.id === id));
+            
+            let freshPlayers = queuePool.filter(p => !p.justPlayed).sort((a,b) => a.games - b.games);
+            let tiredPlayers = queuePool.filter(p => p.justPlayed).sort((a,b) => a.games - b.games);
+            let absoluteFairestChoice = freshPlayers.length > 0 ? freshPlayers[0] : tiredPlayers[0];
+
+            const selectEl = document.getElementById(selectElementId);
+            if (!selectEl.querySelector(`option[value="${absoluteFairestChoice.id}"]`)) {
+                const opt = document.createElement('option');
+                opt.value = absoluteFairestChoice.id;
+                opt.innerText = `${absoluteFairestChoice.name} (Auto)`;
+                selectEl.appendChild(opt);
+            }
+            selectEl.value = absoluteFairestChoice.id;
+        }
+
+        function genOptions(selectedId, currentMatchIds) {
+            let availableOptions = players.filter(p => p.status === 'Queued' || currentMatchIds.includes(p.id));
+            return availableOptions.map(p => {
+                let note = p.justPlayed ? " [Just Played]" : "";
+                return `<option value="${p.id}" ${p.id == selectedId ? 'selected' : ''}>${p.name}${note} (${getWinRate(p)}% WR)</option>`;
+            }).join('');
+        }
+
+        function saveInlineMatchEdits(cId) {
+            const c = courts.find(x => x.id == cId);
+            const oldMatch = { ...c.currentMatch };
+            
+            const n1 = parseInt(document.getElementById(`edit-${cId}-p1`).value);
+            const n2 = parseInt(document.getElementById(`edit-${cId}-p2`).value);
+            const n3 = parseInt(document.getElementById(`edit-${cId}-p3`).value);
+            const n4 = parseInt(document.getElementById(`edit-${cId}-p4`).value);
+
+            const newIds = [n1, n2, n3, n4];
+            if ((new Set(newIds)).size !== 4) return alert("Duplicate players selected.");
+
+            const oldIds = [oldMatch.p1, oldMatch.p2, oldMatch.p3, oldMatch.p4];
+            oldIds.forEach(id => {
+                if (!newIds.includes(id)) {
+                    const p = players.find(x => x.id == id);
+                    if (p) p.status = 'Available'; 
+                }
+            });
+
+            newIds.forEach(id => {
+                const p = players.find(x => x.id == id);
+                if (p) p.status = 'Playing';
+                waitingQueue = waitingQueue.filter(qid => qid !== id);
+            });
+
+            let final4Players = newIds.map(id => players.find(p => p.id === id));
+            final4Players.sort((a, b) => getWinRate(b) - getWinRate(a));
+
+            c.currentMatch.p1 = final4Players[0].id;
+            c.currentMatch.p2 = final4Players[3].id;
+            c.currentMatch.p3 = final4Players[1].id;
+            c.currentMatch.p4 = final4Players[2].id;
+
+            c.isEditing = false;
+            renderSystem();
+        }
+
+        function addCourt() {
+            const n = courts.length + 1;
+            courts.push({ id: Date.now(), name: `Court ${n}`, status: "Available", currentMatch: null, isEditing: false });
+            renderSystem();
+        }
+
+        function removeCourt(courtId) {
+            const c = courts.find(x => x.id === courtId);
+            if (c && c.status === 'Occupied') return alert("Cannot remove an active court.");
+            courts = courts.filter(x => x.id !== courtId);
+            renderSystem();
+        }
+
+        function toggleManualCreator() {
+            const mc = document.getElementById('manual-creator');
+            mc.classList.toggle('hidden');
+            populateManualSelector();
+        }
+
+        function populateManualSelector() {
+            const container = document.getElementById('manual-selector-grid');
+            const avail = players.filter(p => p.status === 'Available' || p.status === 'Queued');
+            
+            if(avail.length === 0) {
+                container.innerHTML = `<div class="col-span-full text-xs text-slate-500 italic py-2">No unassigned players available.</div>`;
+                return;
+            }
+
+            container.innerHTML = avail.map(p => `
+                <label class="flex items-center gap-2 bg-slate-700 dark:bg-slate-800 p-2 rounded-lg text-[10px] font-bold cursor-pointer text-white">
+                    <input type="checkbox" name="manualP" value="${p.id}" class="accent-emerald-500"> ${p.name}
+                </label>
+            `).join('');
+        }
+
+        function createManualMatch() {
+            const sel = Array.from(document.querySelectorAll('input[name="manualP"]:checked')).map(x => parseInt(x.value));
+            if (sel.length !== 4) return alert("Select exactly 4 players");
+            
+            let selectedPlayers = sel.map(id => players.find(x => x.id == id));
+            selectedPlayers.forEach(p => {
+                p.status = 'Staged';
+                waitingQueue = waitingQueue.filter(q => q != p.id);
+            });
+
+            selectedPlayers.sort((a, b) => getWinRate(b) - getWinRate(a));
+
+            upNextDeck.push({ 
+                id: Date.now(), 
+                p1: selectedPlayers[0].id, 
+                p2: selectedPlayers[3].id, 
+                p3: selectedPlayers[1].id, 
+                p4: selectedPlayers[2].id 
+            });
+            
+            toggleManualCreator();
+            renderSystem();
+            processPipeline();
+        }
+
+        function removePlayer(id) {
+            players = players.filter(p => p.id != id);
+            waitingQueue = waitingQueue.filter(q => q != id);
+            renderSystem();
+        }
+
+        function dismissStaged(matchId) {
+            const m = upNextDeck.find(x => x.id == matchId);
+            if (m) {
+                [m.p1, m.p2, m.p3, m.p4].forEach(id => {
+                    const p = players.find(x => x.id == id);
+                    if (p) {
+                        p.status = 'Queued';
+                        waitingQueue.push(id);
+                    }
+                });
+            }
+            upNextDeck = upNextDeck.filter(x => x.id != matchId);
+            renderSystem();
+        }
+
+        // First paint initialization
+        renderSystem();
+    </script>
+</body>
+</html>
