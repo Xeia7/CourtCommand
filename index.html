@@ -67,7 +67,10 @@
                     </span>
                     Live Courts
                 </h2>
-                <div class="flex gap-2">
+                <div class="flex flex-wrap gap-2">
+                    <button onclick="checkOutAllPlayers()" class="text-xs bg-amber-600 hover:bg-amber-700 px-3 py-1.5 rounded-lg font-bold transition text-white">
+                        <i class="fas fa-sign-out-alt mr-1"></i> Check Out All Active
+                    </button>
                     <button onclick="downloadSummary()" class="text-xs bg-emerald-600 hover:bg-emerald-700 px-3 py-1.5 rounded-lg font-bold transition text-white">
                         <i class="fas fa-file-download mr-1"></i> Export Summary
                     </button>
@@ -222,38 +225,54 @@
         }
 
         function renderRoster() {
-            const container = document.getElementById('roster-container');
-            document.getElementById('roster-count').innerText = players.length;
-            
-            if (players.length === 0) {
-                container.innerHTML = `<div class="text-xs text-slate-500 italic text-center py-4">No players registered. Add players above.</div>`;
-                return;
-            }
+    const container = document.getElementById('roster-container');
+    document.getElementById('roster-count').innerText = players.length;
+    
+    if (players.length === 0) {
+        container.innerHTML = `<div class="text-xs text-slate-500 italic text-center py-4">No players registered. Add players above.</div>`;
+        return;
+    }
 
-            const themeCardBg = isDarkMode ? "bg-slate-800/50 border-slate-700/50" : "bg-white border-slate-200 shadow-sm";
-            const themeTextMain = isDarkMode ? "text-slate-200" : "text-slate-800";
-            const themeTextBadges = isDarkMode ? "bg-slate-700 text-slate-400" : "bg-slate-200 text-slate-600";
+    const themeCardBg = isDarkMode ? "bg-slate-800/50 border-slate-700/50" : "bg-white border-slate-200 shadow-sm";
+    const themeTextMain = isDarkMode ? "text-slate-200" : "text-slate-800";
+    const themeTextBadges = isDarkMode ? "bg-slate-700 text-slate-400" : "bg-slate-200 text-slate-600";
 
-            container.innerHTML = players.sort((a,b) => b.id - a.id).sort((a,b) => getWinRate(b) - getWinRate(a)).map(p => `
-                <div class="${themeCardBg} border p-3 rounded-2xl flex justify-between items-center">
-                    <div>
-                        <div class="font-bold text-sm ${themeTextMain}">
-                            ${p.name} 
-                            <span class="text-[10px] ${themeTextBadges} px-1.5 py-0.5 rounded font-normal ml-1">${p.status}</span>
-                            ${p.justPlayed ? `<span class="text-[9px] bg-amber-500/10 border border-amber-500/30 text-amber-400 px-1.5 py-0.5 rounded font-normal ml-1">Just Played</span>` : ''}
-                        </div>
-                        <div class="text-[10px] text-slate-400 uppercase font-bold mt-0.5">
-                            ${p.wins}W / ${p.games - p.wins}L • <span class="text-emerald-500">${getWinRate(p)}% Winrate</span>
-                        </div>
-                        <div class="text-[9px] text-slate-500 font-mono">Played: ${p.games} games • In: ${p.checkInTime}</div>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        ${p.status === 'Available' ? `<button onclick="sendToQueue(${p.id})" class="bg-emerald-500/10 text-emerald-500 p-2 rounded-lg text-xs hover:bg-emerald-500 hover:text-slate-950 transition"><i class="fas fa-plus"></i></button>` : ''}
-                        <button onclick="removePlayer(${p.id})" class="text-slate-400 hover:text-rose-500 transition"><i class="fas fa-trash"></i></button>
-                    </div>
-                </div>
-            `).join('');
+    container.innerHTML = players.sort((a,b) => b.id - a.id).sort((a,b) => getWinRate(b) - getWinRate(a)).map(p => {
+        let actionButton = '';
+        if (p.status === 'Available') {
+            actionButton = `<button onclick="sendToQueue(${p.id})" class="bg-emerald-500/10 text-emerald-500 p-2 rounded-lg text-xs hover:bg-emerald-500 hover:text-slate-950 transition"><i class="fas fa-plus"></i></button>`;
         }
+        
+        // Add Idle / Check-In button conditional layout
+        let idleToggleBtn = '';
+        if (p.status === 'Queued' || p.status === 'Available') {
+            idleToggleBtn = `<button onclick="setPlayerIdle(${p.id})" title="Go Idle" class="text-slate-400 hover:text-amber-500 transition p-1"><i class="fas fa-coffee"></i></button>`;
+        } else if (p.status === 'Idle') {
+            idleToggleBtn = `<button onclick="checkInFromIdle(${p.id})" title="Check In" class="text-amber-500 hover:text-emerald-500 font-bold transition p-1 text-xs flex items-center gap-1"><i class="fas fa-sign-in-alt"></i> Check In</button>`;
+        }
+
+        return `
+            <div class="${themeCardBg} border p-3 rounded-2xl flex justify-between items-center">
+                <div>
+                    <div class="font-bold text-sm ${themeTextMain}">
+                        ${p.name} 
+                        <span class="text-[10px] ${p.status === 'Idle' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' : themeTextBadges} px-1.5 py-0.5 rounded font-normal ml-1">${p.status}</span>
+                        ${p.justPlayed ? `<span class="text-[9px] bg-amber-500/10 border border-amber-500/30 text-amber-400 px-1.5 py-0.5 rounded font-normal ml-1">Just Played</span>` : ''}
+                    </div>
+                    <div class="text-[10px] text-slate-400 uppercase font-bold mt-0.5">
+                        ${p.wins}W / ${p.games - p.wins}L • <span class="text-emerald-500">${getWinRate(p)}% Winrate</span>
+                    </div>
+                    <div class="text-[9px] text-slate-500 font-mono">Played: ${p.games} games • In: ${p.checkInTime}</div>
+                </div>
+                <div class="flex items-center gap-2">
+                    ${actionButton}
+                    ${idleToggleBtn}
+                    <button onclick="removePlayer(${p.id})" class="text-slate-400 hover:text-rose-500 transition"><i class="fas fa-trash"></i></button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
 
         function renderCourts() {
             const container = document.getElementById('courts-grid');
@@ -395,25 +414,27 @@
         }
 
         function addPlayer() {
-            const inp = document.getElementById('newPlayerName');
-            if (!inp.value.trim()) return;
-            const now = new Date();
-            const p = { 
-                id: Date.now(), 
-                name: inp.value.trim(), 
-                status: 'Available', 
-                wins: 0, 
-                games: 0, 
-                justPlayed: false,
-                queuedAt: null,
-                checkInTime: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                checkInEpoch: now.getTime(),
-                checkOutTime: "Active"
-            };
-            players.push(p);
-            inp.value = '';
-            sendToQueue(p.id);
-        }
+    const inp = document.getElementById('newPlayerName');
+    if (!inp.value.trim()) return;
+    const now = new Date();
+    const p = { 
+        id: Date.now(), 
+        name: inp.value.trim(), 
+        status: 'Available', 
+        wins: 0, 
+        games: 0, 
+        justPlayed: false,
+        queuedAt: null,
+        checkInTime: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        checkInEpoch: now.getTime(),
+        checkOutTime: "Active",
+        totalIdleMs: 0,         // Track cumulative idle duration
+        idleStartedAt: null     // Mark when current idle state began
+    };
+    players.push(p);
+    inp.value = '';
+    sendToQueue(p.id);
+}
 
         function sendToQueue(id) {
             const p = players.find(x => x.id == id);
@@ -715,35 +736,76 @@
             processPipeline();
         }
 
-        function removePlayer(id) {
-            const pIndex = players.findIndex(p => p.id == id);
-            if (pIndex !== -1) {
-                const targetPlayer = players[pIndex];
-                targetPlayer.checkOutTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                archivedPlayers.push(targetPlayer);
-                players.splice(pIndex, 1);
-            }
-            waitingQueue = waitingQueue.filter(q => q != id);
-            saveToStorage();
-            renderSystem();
-        }
+function setPlayerIdle(id) {
+    const p = players.find(x => x.id == id);
+    if (!p) return;
+    
+    p.status = 'Idle';
+    p.idleStartedAt = Date.now(); // Start timing the idle period
+    waitingQueue = waitingQueue.filter(qId => qId != id);
+    
+    saveToStorage();
+    renderSystem();
+}
 
-        function dismissStaged(matchId) {
-            const m = upNextDeck.find(x => x.id == matchId);
-            if (m) {
-                [m.p1, m.p2, m.p3, m.p4].forEach(id => {
-                    const p = players.find(x => x.id == id);
-                    if (p) {
-                        p.status = 'Queued';
-                        p.queuedAt = Date.now();
-                        waitingQueue.push(id);
-                    }
-                });
-            }
-            upNextDeck = upNextDeck.filter(x => x.id != matchId);
-            saveToStorage();
-            renderSystem();
+function checkInFromIdle(id) {
+    const p = players.find(x => x.id == id);
+    if (!p) return;
+
+    // Calculate elapsed idle time and add to cumulative total
+    if (p.idleStartedAt) {
+        p.totalIdleMs += (Date.now() - p.idleStartedAt);
+        p.idleStartedAt = null; // Reset session tracker
+    }
+
+    p.status = 'Queued';
+    p.justPlayed = false;
+    
+    if (waitingQueue.length >= 4) {
+        let basePool = waitingQueue.map(qId => players.find(x => x.id === qId));
+        basePool.sort((a, b) => (a.queuedAt || 0) - (b.queuedAt || 0));
+        p.queuedAt = (basePool[3].queuedAt || Date.now()) + 1;
+    } else {
+        p.queuedAt = Date.now() - 3600000; 
+    }
+    
+    waitingQueue.push(id);
+    saveToStorage();
+    renderSystem();
+}
+
+        function removePlayer(id) {
+    const pIndex = players.findIndex(p => p.id == id);
+    if (pIndex !== -1) {
+        const targetPlayer = players[pIndex];
+        
+        // Final check: if they left while marked idle, close out their idle timer
+        if (targetPlayer.status === 'Idle' && targetPlayer.idleStartedAt) {
+            targetPlayer.totalIdleMs += (Date.now() - targetPlayer.idleStartedAt);
+            targetPlayer.idleStartedAt = null;
         }
+        
+        targetPlayer.checkOutTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        targetPlayer.checkOutEpoch = Date.now(); // Added to lock venue duration math
+        archivedPlayers.push(targetPlayer);
+        players.splice(pIndex, 1);
+    }
+    waitingQueue = waitingQueue.filter(qId => qId != id);
+    saveToStorage();
+    renderSystem();
+}
+
+function checkOutAllPlayers() {
+    if (players.length === 0) return alert("No active players to check out.");
+    if (!confirm("Are you sure you want to check out all remaining active players to end open play?")) return;
+    
+    // Copy the roster to process each player safely
+    const activePlayersList = [...players];
+    activePlayersList.forEach(p => {
+        removePlayer(p.id);
+    });
+    alert("All remaining players have been checked out successfully.");
+}
 
         // --- EXPORT FUNCTIONS ---
         function downloadSummary() {
@@ -756,90 +818,110 @@
         }
 
         function executeExport(type) {
-            closeExportModal();
-            const exportDate = new Date().toLocaleDateString();
-            
-            let waitMap = {};
-            matchHistory.forEach(h => {
-                if (h.waitData) {
-                    h.waitData.forEach(pWait => {
-                        if (!waitMap[pWait.name]) waitMap[pWait.name] = { total: 0, count: 0 };
-                        waitMap[pWait.name].total += pWait.waitTime;
-                        waitMap[pWait.name].count += 1;
-                    });
-                }
+    closeExportModal();
+    const exportDate = new Date().toLocaleDateString();
+    
+    let waitMap = {};
+    matchHistory.forEach(h => {
+        if (h.waitData) {
+            h.waitData.forEach(pWait => {
+                if (!waitMap[pWait.name]) waitMap[pWait.name] = { total: 0, count: 0 };
+                waitMap[pWait.name].total += pWait.waitTime;
+                waitMap[pWait.name].count += 1;
             });
-            
-            const waitAverages = Object.keys(waitMap).map(name => ({
-                name,
-                avg: Math.round(waitMap[name].total / waitMap[name].count)
-            })).sort((a,b) => b.avg - a.avg);
-
-            const completeRoster = [...players, ...archivedPlayers];
-
-            if (type === 'excel') {
-                let csvRows = [];
-                csvRows.push(`Open Play (${exportDate}) Summary`);
-                csvRows.push(`Exported at: ${new Date().toLocaleString()}`);
-                csvRows.push("");
-                
-                csvRows.push("PLAYER ROSTER & STATS");
-                csvRows.push("Name,Games Played,Wins,Losses,Win Rate (%),Check In,Check Out");
-                completeRoster.sort((a,b) => getWinRate(b) - getWinRate(a)).forEach(p => {
-                    csvRows.push(`"${p.name}",${p.games},${p.wins},${p.games-p.wins},${getWinRate(p)}%,"${p.checkInTime}","${p.checkOutTime}"`);
-                });
-                csvRows.push("");
-
-                csvRows.push("AVERAGE WAITING TIME ANALYSIS");
-                csvRows.push("Player Name,Avg Wait (min)");
-                waitAverages.forEach(w => csvRows.push(`"${w.name}",${w.avg}`));
-                csvRows.push("");
-
-                csvRows.push("COMPLETE MATCH LOG");
-                csvRows.push("Time,Court,Team 1,Team 2,Winner,Duration (min)");
-                matchHistory.forEach(h => {
-                    csvRows.push(`"${h.timestamp}","${h.court}","${h.team1}","${h.team2}","${h.winner}",${h.duration}`);
-                });
-
-                const csvString = csvRows.join("\n");
-                const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
-                const link = document.createElement("a");
-                link.setAttribute("href", URL.createObjectURL(blob));
-                link.setAttribute("download", `PickleQ_${exportDate.replace(/\//g,'-')}.csv`);
-                link.click();
-            } else {
-                const printWindow = window.open('', '_blank');
-                let html = `<html><head><title>Summary ${exportDate}</title><style>
-                    body { font-family: sans-serif; padding: 20px; color: #333; }
-                    table { width: 100%; border-collapse: collapse; margin-bottom: 25px; }
-                    th, td { border: 1px solid #ddd; padding: 6px; text-align: left; font-size: 11px; }
-                    th { background-color: #f8fafc; color: #64748b; text-transform: uppercase; }
-                    h2 { color: #059669; border-bottom: 2px solid #059669; padding-bottom: 5px; font-size: 16px; }
-                </style></head><body>`;
-                
-                html += `<h1>Open Play (${exportDate}) Summary</h1><p>Generated: ${new Date().toLocaleString()}</p>`;
-                
-                html += `<h2>Player Leaderboard</h2><table><thead><tr><th>Name</th><th>Games</th><th>Wins</th><th>Winrate</th><th>Check In</th><th>Check Out</th></tr></thead><tbody>`;
-                completeRoster.sort((a,b) => getWinRate(b) - getWinRate(a)).forEach(p => {
-                    html += `<tr><td>${p.name}</td><td>${p.games}</td><td>${p.wins}</td><td>${getWinRate(p)}%</td><td>${p.checkInTime}</td><td>${p.checkOutTime}</td></tr>`;
-                });
-                html += `</tbody></table>`;
-
-                html += `<h2>Average Wait Times</h2><table><thead><tr><th>Player Name</th><th>Avg Minutes Waiting Per Match</th></tr></thead><tbody>`;
-                waitAverages.forEach(w => html += `<tr><td>${w.name}</td><td>${w.avg} min</td></tr>`);
-                html += `</tbody></table>`;
-
-                html += `<h2>Match History</h2><table><thead><tr><th>Time</th><th>Court</th><th>Matchup</th><th>Winner</th><th>Dur</th></tr></thead><tbody>`;
-                matchHistory.forEach(h => {
-                    html += `<tr><td>${h.timestamp}</td><td>${h.court}</td><td>${h.team1} vs ${h.team2}</td><td>${h.winner}</td><td>${h.duration}m</td></tr>`;
-                });
-                html += `</tbody></table></body></html>`;
-                
-                printWindow.document.write(html);
-                printWindow.document.close();
-                setTimeout(() => printWindow.print(), 500);
-            }
         }
+    });
+    
+    const waitAverages = Object.keys(waitMap).map(name => ({
+        name,
+        avg: Math.round(waitMap[name].total / waitMap[name].count)
+    })).sort((a,b) => b.avg - a.avg);
+
+    const completeRoster = [...players, ...archivedPlayers];
+
+    // Helper function to pull structural idle times safely
+    function getIdleDurationMin(p) {
+        let cumulative = p.totalIdleMs || 0;
+        if (p.status === 'Idle' && p.idleStartedAt) {
+            cumulative += (Date.now() - p.idleStartedAt);
+        }
+        return Math.round(cumulative / 60000);
+    }
+
+    // Adjusted dynamic venue time helper logic: (Check Out Epoch - Check In Epoch) - Idle Duration
+    function getVenueDurationMin(p) {
+        const endPoint = p.checkOutEpoch ? p.checkOutEpoch : Date.now();
+        const absoluteDurationMs = endPoint - p.checkInEpoch;
+        const totalIdleMs = (p.totalIdleMs || 0) + ((p.status === 'Idle' && p.idleStartedAt) ? (Date.now() - p.idleStartedAt) : 0);
+        const venueActiveDurationMs = absoluteDurationMs - totalIdleMs;
+        return Math.max(0, Math.round(venueActiveDurationMs / 60000));
+    }
+
+    if (type === 'excel') {
+        let csvRows = [];
+        csvRows.push(`Open Play (${exportDate}) Summary`);
+        csvRows.push(`Exported at: ${new Date().toLocaleString()}`);
+        csvRows.push("");
+        
+        csvRows.push("PLAYER ROSTER & STATS");
+        // Added 'Idle Duration (min)' and 'Total Venue Time (min)' columns
+        csvRows.push("Name,Games Played,Wins,Losses,Win Rate (%),Idle Duration (min),Total Venue Time (min),Check In,Check Out");
+        completeRoster.sort((a,b) => getWinRate(b) - getWinRate(a)).forEach(p => {
+            csvRows.push(`"${p.name}",${p.games},${p.wins},${p.games-p.wins},${getWinRate(p)}%,${getIdleDurationMin(p)},${getVenueDurationMin(p)},"${p.checkInTime}","${p.checkOutTime}"`);
+        });
+        csvRows.push("");
+
+        csvRows.push("AVERAGE WAITING TIME ANALYSIS");
+        csvRows.push("Player Name,Avg Wait (min)");
+        waitAverages.forEach(w => csvRows.push(`"${w.name}",${w.avg}`));
+        csvRows.push("");
+
+        csvRows.push("COMPLETE MATCH LOG");
+        csvRows.push("Time,Court,Team 1,Team 2,Winner,Duration (min)");
+        matchHistory.forEach(h => {
+            csvRows.push(`"${h.timestamp}","${h.court}","${h.team1}","${h.team2}","${h.winner}",${h.duration}`);
+        });
+
+        const csvString = csvRows.join("\n");
+        const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        link.setAttribute("href", URL.createObjectURL(blob));
+        link.setAttribute("download", `PickleQ_${exportDate.replace(/\//g,'-')}.csv`);
+        link.click();
+    } else {
+        const printWindow = window.open('', '_blank');
+        let html = `<html><head><title>Summary ${exportDate}</title><style>
+            body { font-family: sans-serif; padding: 20px; color: #333; }
+            table { width: 100%; border-collapse: collapse; margin-bottom: 25px; }
+            th, td { border: 1px solid #ddd; padding: 6px; text-align: left; font-size: 11px; }
+            th { background-color: #f8fafc; color: #64748b; text-transform: uppercase; }
+            h2 { color: #059669; border-bottom: 2px solid #059669; padding-bottom: 5px; font-size: 16px; }
+        </style></head><body>`;
+        
+        html += `<h1>Open Play (${exportDate}) Summary</h1><p>Generated: ${new Date().toLocaleString()}</p>`;
+        
+        // Added columns to HTML UI print preview context maps 
+        html += `<h2>Player Leaderboard</h2><table><thead><tr><th>Name</th><th>Games</th><th>Wins</th><th>Winrate</th><th>Total Idle Time</th><th>Venue Duration</th><th>Check In</th><th>Check Out</th></tr></thead><tbody>`;
+        completeRoster.sort((a,b) => getWinRate(b) - getWinRate(a)).forEach(p => {
+            html += `<tr><td>${p.name}</td><td>${p.games}</td><td>${p.wins}</td><td>${getWinRate(p)}%</td><td>${getIdleDurationMin(p)} min</td><td>${getVenueDurationMin(p)} min</td><td>${p.checkInTime}</td><td>${p.checkOutTime}</td></tr>`;
+        });
+        html += `</tbody></table>`;
+
+        html += `<h2>Average Wait Times</h2><table><thead><tr><th>Player Name</th><th>Avg Minutes Waiting Per Match</th></tr></thead><tbody>`;
+        waitAverages.forEach(w => html += `<tr><td>${w.name}</td><td>${w.avg} min</td></tr>`);
+        html += `</tbody></table>`;
+
+        html += `<h2>Match History</h2><table><thead><tr><th>Time</th><th>Court</th><th>Matchup</th><th>Winner</th><th>Dur</th></tr></thead><tbody>`;
+        matchHistory.forEach(h => {
+            html += `<tr><td>${h.timestamp}</td><td>${h.court}</td><td>${h.team1} vs ${h.team2}</td><td>${h.winner}</td><td>${h.duration}m</td></tr>`;
+        });
+        html += `</tbody></table></body></html>`;
+        
+        printWindow.document.write(html);
+        printWindow.document.close();
+        setTimeout(() => printWindow.print(), 500);
+    }
+}
 
         // --- LIFE-CYCLE INIT ---
         loadFromStorage();
