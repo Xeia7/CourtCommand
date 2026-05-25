@@ -50,9 +50,14 @@
                     </span>
                     Live Courts
                 </h2>
-                <button onclick="addCourt()" class="text-xs bg-slate-800 dark:bg-slate-950 hover:bg-slate-700 dark:hover:bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-700 dark:border-slate-800 transition text-slate-200">
-                    + Add Court
-                </button>
+                <div class="flex gap-2">
+                    <button onclick="resetAllData()" class="text-xs bg-rose-600 hover:bg-rose-700 px-3 py-1.5 rounded-lg font-bold transition text-white">
+                        <i class="fas fa-trash-alt mr-1"></i> Reset System
+                    </button>
+                    <button onclick="addCourt()" class="text-xs bg-slate-800 dark:bg-slate-950 hover:bg-slate-700 dark:hover:bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-700 dark:border-slate-800 transition text-slate-200">
+                        + Add Court
+                    </button>
+                </div>
             </div>
             <div id="courts-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
                 <!-- Courts injected here -->
@@ -104,17 +109,59 @@
     </main>
 
     <script>
-        // No default simulated players on boot
+        // Core state configurations
         let players = [];
-
         let courts = [
             { id: 1, name: "Court 1", status: "Available", currentMatch: null, isEditing: false },
             { id: 2, name: "Court 2", status: "Available", currentMatch: null, isEditing: false }
         ];
-
         let waitingQueue = [];
         let upNextDeck = [];
         let isDarkMode = true;
+
+        // --- PERSISTENCE LAYER LOADER ---
+        function loadFromStorage() {
+            if (localStorage.getItem('pq_players')) {
+                players = JSON.parse(localStorage.getItem('pq_players'));
+            }
+            if (localStorage.getItem('pq_courts')) {
+                courts = JSON.parse(localStorage.getItem('pq_courts'));
+                // Force-clean layout tracking flag so UI boots cleanly
+                courts.forEach(c => c.isEditing = false);
+            }
+            if (localStorage.getItem('pq_waitingQueue')) {
+                waitingQueue = JSON.parse(localStorage.getItem('pq_waitingQueue'));
+            }
+            if (localStorage.getItem('pq_upNextDeck')) {
+                upNextDeck = JSON.parse(localStorage.getItem('pq_upNextDeck'));
+            }
+            if (localStorage.getItem('pq_isDarkMode')) {
+                isDarkMode = JSON.parse(localStorage.getItem('pq_isDarkMode'));
+            }
+        }
+
+        // --- PERSISTENCE LAYER SAVER ---
+        function saveToStorage() {
+            localStorage.setItem('pq_players', JSON.stringify(players));
+            localStorage.setItem('pq_courts', JSON.stringify(courts));
+            localStorage.setItem('pq_waitingQueue', JSON.stringify(waitingQueue));
+            localStorage.setItem('pq_upNextDeck', JSON.stringify(upNextDeck));
+            localStorage.setItem('pq_isDarkMode', JSON.stringify(isDarkMode));
+        }
+
+        // --- RESET SYSTEM FUNCTION ---
+        function resetAllData() {
+            if (!confirm("Are you sure you want to completely wipe out all players, stats, and court logs? This cannot be undone.")) return;
+            localStorage.clear();
+            players = [];
+            courts = [
+                { id: 1, name: "Court 1", status: "Available", currentMatch: null, isEditing: false },
+                { id: 2, name: "Court 2", status: "Available", currentMatch: null, isEditing: false }
+            ];
+            waitingQueue = [];
+            upNextDeck = [];
+            renderSystem();
+        }
 
         function getWinRate(p) {
             return p.games === 0 ? 0 : Math.round((p.wins / p.games) * 100);
@@ -122,6 +169,12 @@
 
         function toggleTheme() {
             isDarkMode = !isDarkMode;
+            applyThemeClasses();
+            saveToStorage();
+            renderSystem();
+        }
+
+        function applyThemeClasses() {
             const body = document.body;
             const themeIcon = document.getElementById('theme-icon');
             const themeText = document.getElementById('theme-text');
@@ -135,7 +188,6 @@
                 themeIcon.className = "fas fa-moon";
                 themeText.innerText = "Dark Mode";
             }
-            renderSystem();
         }
 
         function renderSystem() {
@@ -164,7 +216,7 @@
                         <div class="font-bold text-sm ${themeTextMain}">
                             ${p.name} 
                             <span class="text-[10px] ${themeTextBadges} px-1.5 py-0.5 rounded font-normal ml-1">${p.status}</span>
-                            ${p.justPlayed ? `<span class="text-[9px] bg-amber-500/10 border border-amber-500/30 text-amber-500 px-1.5 py-0.5 rounded font-normal ml-1">Just Played</span>` : ''}
+                            ${p.justPlayed ? `<span class="text-[9px] bg-amber-500/10 border border-amber-500/30 text-amber-400 px-1.5 py-0.5 rounded font-normal ml-1">Just Played</span>` : ''}
                         </div>
                         <div class="text-[10px] text-slate-400 uppercase font-bold mt-0.5">
                             ${p.wins}W / ${p.games - p.wins}L • <span class="text-emerald-500">${getWinRate(p)}% Winrate</span>
@@ -210,7 +262,6 @@
                 const p3 = players.find(p => p.id == m.p3) || { name: 'Unknown', games: 0, wins: 0 };
                 const p4 = players.find(p => p.id == m.p4) || { name: 'Unknown', games: 0, wins: 0 };
 
-                // INLINE MANAGEMENT PANEL RENDER LOGIC
                 if (c.isEditing) {
                     const currentMatchIds = [m.p1, m.p2, m.p3, m.p4];
                     return `
@@ -264,7 +315,6 @@
                     `;
                 }
 
-                // LIVE OCCUPIED VIEW
                 return `
                     <div class="${cardBg} border border-blue-500/30 rounded-3xl overflow-hidden shadow-xl flex flex-col justify-between min-h-[220px]">
                         <div class="bg-blue-500/10 px-4 py-2 border-b border-blue-500/20 flex justify-between items-center">
@@ -329,6 +379,7 @@
             const p = players.find(x => x.id == id);
             p.status = 'Queued';
             waitingQueue.push(id);
+            saveToStorage();
             renderSystem();
         }
 
@@ -371,6 +422,7 @@
                 p4: interleavedPool[2].id 
             });
 
+            saveToStorage();
             renderSystem();
             processPipeline();
         }
@@ -390,6 +442,7 @@
             });
             c.status = 'Occupied';
             c.currentMatch = m;
+            saveToStorage();
             renderSystem();
         }
 
@@ -422,10 +475,10 @@
             c.currentMatch = null;
             c.isEditing = false;
             processPipeline();
+            saveToStorage();
             renderSystem();
         }
 
-        // CONTROL TOGGLE FOR THE INLINE FORMS
         function toggleCourtEdit(cId, showState) {
             const c = courts.find(x => x.id == cId);
             if(c) c.isEditing = showState;
@@ -493,12 +546,14 @@
             c.currentMatch.p4 = final4Players[2].id;
 
             c.isEditing = false;
+            saveToStorage();
             renderSystem();
         }
 
         function addCourt() {
             const n = courts.length + 1;
             courts.push({ id: Date.now(), name: `Court ${n}`, status: "Available", currentMatch: null, isEditing: false });
+            saveToStorage();
             renderSystem();
         }
 
@@ -506,6 +561,7 @@
             const c = courts.find(x => x.id === courtId);
             if (c && c.status === 'Occupied') return alert("Cannot remove an active court.");
             courts = courts.filter(x => x.id !== courtId);
+            saveToStorage();
             renderSystem();
         }
 
@@ -552,6 +608,7 @@
             });
             
             toggleManualCreator();
+            saveToStorage();
             renderSystem();
             processPipeline();
         }
@@ -559,6 +616,7 @@
         function removePlayer(id) {
             players = players.filter(p => p.id != id);
             waitingQueue = waitingQueue.filter(q => q != id);
+            saveToStorage();
             renderSystem();
         }
 
@@ -574,10 +632,13 @@
                 });
             }
             upNextDeck = upNextDeck.filter(x => x.id != matchId);
+            saveToStorage();
             renderSystem();
         }
 
-        // First paint initialization
+        // --- LIFE-CYCLE INIT ---
+        loadFromStorage();
+        applyThemeClasses();
         renderSystem();
     </script>
 </body>
