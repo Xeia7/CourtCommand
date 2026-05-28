@@ -90,17 +90,29 @@
             
             <div class="lg:col-span-8 space-y-8">
                 <div>
-                    <h3 class="text-sm font-bold uppercase tracking-widest text-slate-400 mb-4 px-1">Up Next Deck</h3>
+                    <div class="flex items-center justify-between mb-4 px-1">
+                        <h3 class="text-sm font-bold uppercase tracking-widest text-slate-400">Up Next Deck</h3>
+                        <div class="flex items-center gap-2">
+                            <button id="upnext-toggle" onclick="toggleUpNextAllow()" class="text-xs bg-slate-800 hover:bg-slate-700 dark:bg-slate-950 dark:hover:bg-slate-900 text-slate-200 border border-slate-700 dark:border-slate-800 px-3 py-1.5 rounded-lg transition flex items-center gap-2">
+                                <i id="upnext-toggle-icon" class="fas fa-lock"></i>
+                                <span id="upnext-toggle-text" class="font-bold">Locked</span>
+                            </button>
+                        </div>
+                    </div>
                     <div id="up-next-container" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         </div>
                 </div>
 
                 <div class="flex gap-3">
-                    <button onclick="autoMatchmake()" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-2xl transition flex items-center justify-center gap-2 shadow-lg shadow-blue-900/20">
+                    <button onclick="autoMatchmake()" id="auto-match-btn" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-2xl transition flex items-center justify-center gap-2 shadow-lg shadow-blue-900/20">
                         <i class="fas fa-bolt"></i> Auto Match
                     </button>
-                    <button onclick="toggleManualCreator()" class="flex-1 bg-slate-800 dark:bg-slate-950 hover:bg-slate-700 dark:hover:bg-slate-900 text-slate-200 border border-slate-700 dark:border-slate-800 font-bold py-3 rounded-2xl transition flex items-center justify-center gap-2">
+                    <button onclick="toggleManualCreator()" id="manual-select-btn" class="flex-1 bg-slate-800 dark:bg-slate-950 hover:bg-slate-700 dark:hover:bg-slate-900 text-slate-200 border border-slate-700 dark:border-slate-800 font-bold py-3 rounded-2xl transition flex items-center justify-center gap-2">
                         <i class="fas fa-hand-pointer"></i> Manual Select
+                    </button>
+                    <button id="game-time-toggle" onclick="toggleGameTimeMode()" class="text-xs bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded-md font-bold transition text-slate-200 flex items-center gap-2" title="Game Time Off">
+                        <i id="game-time-icon" class="fas fa-stopwatch"></i>
+                        <span id="game-time-text">GMT</span>
                     </button>
                 </div>
 
@@ -136,6 +148,10 @@
         let upNextDeck = [];
         let matchHistory = []; // Track completed matches for summary
         let isDarkMode = true;
+        // If true, allow preparing/staging matches even when all courts are occupied
+        let allowStagingWhenFull = false;
+        // When true, create matches as high-high vs high-high (top2 vs next2)
+        let gameTimeMode = false;
 
         // --- PERSISTENCE LAYER LOADER ---
         function loadFromStorage() {
@@ -161,6 +177,12 @@
             if (localStorage.getItem('pq_isDarkMode')) {
                 isDarkMode = JSON.parse(localStorage.getItem('pq_isDarkMode'));
             }
+            if (localStorage.getItem('pq_allowStagingWhenFull')) {
+                allowStagingWhenFull = JSON.parse(localStorage.getItem('pq_allowStagingWhenFull'));
+            }
+            if (localStorage.getItem('pq_gameTimeMode')) {
+                gameTimeMode = JSON.parse(localStorage.getItem('pq_gameTimeMode'));
+            }
         }
 
         // --- PERSISTENCE LAYER SAVER ---
@@ -172,6 +194,8 @@
             localStorage.setItem('pq_upNextDeck', JSON.stringify(upNextDeck));
             localStorage.setItem('pq_matchHistory', JSON.stringify(matchHistory));
             localStorage.setItem('pq_isDarkMode', JSON.stringify(isDarkMode));
+            localStorage.setItem('pq_allowStagingWhenFull', JSON.stringify(allowStagingWhenFull));
+            localStorage.setItem('pq_gameTimeMode', JSON.stringify(gameTimeMode));
         }
 
         // --- RESET SYSTEM FUNCTION ---
@@ -222,6 +246,51 @@
             renderRoster();
             renderUpNext();
             populateManualSelector();
+            updateUpNextToggleUI();
+            updateGameTimeUI();
+        }
+
+        function updateGameTimeUI() {
+            const icon = document.getElementById('game-time-icon');
+            const text = document.getElementById('game-time-text');
+            const btn = document.getElementById('game-time-toggle');
+            if (!icon || !text || !btn) return;
+            // Keep label short
+            text.innerText = 'GMT';
+            if (gameTimeMode) {
+                btn.className = 'text-xs bg-emerald-500 hover:bg-emerald-600 px-2 py-1 rounded-md font-bold transition text-white flex items-center gap-2';
+                icon.className = 'fas fa-stopwatch text-white';
+                btn.title = 'Game Time On';
+            } else {
+                btn.className = 'text-xs bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded-md font-bold transition text-slate-200 flex items-center gap-2';
+                icon.className = 'fas fa-stopwatch text-slate-200';
+                btn.title = 'Game Time Off';
+            }
+        }
+
+        function toggleGameTimeMode() {
+            gameTimeMode = !gameTimeMode;
+            saveToStorage();
+            updateGameTimeUI();
+        }
+
+        function updateUpNextToggleUI() {
+            const icon = document.getElementById('upnext-toggle-icon');
+            const text = document.getElementById('upnext-toggle-text');
+            if (!icon || !text) return;
+            if (allowStagingWhenFull) {
+                icon.className = 'fas fa-unlock text-emerald-400';
+                text.innerText = 'Unlocked';
+            } else {
+                icon.className = 'fas fa-lock text-rose-400';
+                text.innerText = 'Locked';
+            }
+        }
+
+        function toggleUpNextAllow() {
+            allowStagingWhenFull = !allowStagingWhenFull;
+            saveToStorage();
+            updateUpNextToggleUI();
         }
 
         function renderRoster() {
@@ -413,9 +482,62 @@
             `).join('');
         }
 
+        // Build a match object `{id,p1,p2,p3,p4}` from an array of 4 player objects
+        // Behavior changes depending on `gameTimeMode`:
+        // - gameTimeMode=false: balanced teams (high-low vs high-low) => 1+4 vs 2+3
+        // - gameTimeMode=true: competitive teams (top2 vs next2) => 1+2 vs 3+4
+        function buildMatchFromSelected(selectedPlayers) {
+            // Ensure we have 4 players
+            if (!Array.isArray(selectedPlayers) || selectedPlayers.length < 4) return null;
+
+            // Copy to avoid mutating original array
+            const copy = [...selectedPlayers];
+            // Determine ranking by winrate for consistent team formation
+            copy.sort((a, b) => getWinRate(b) - getWinRate(a));
+
+            let p1, p2, p3, p4;
+            if (gameTimeMode) {
+                // Top two vs next two
+                p1 = copy[0].id;
+                p2 = copy[1].id;
+                p3 = copy[2].id;
+                p4 = copy[3].id;
+            } else {
+                // Balanced teams: highest with lowest vs middle pair
+                p1 = copy[0].id;
+                p2 = copy[3].id;
+                p3 = copy[1].id;
+                p4 = copy[2].id;
+            }
+
+            return { id: Date.now(), p1, p2, p3, p4 };
+        }
+
+        function dismissStaged(id) {
+            const idx = upNextDeck.findIndex(m => m.id == id);
+            if (idx === -1) return;
+            const m = upNextDeck.splice(idx, 1)[0];
+
+            [m.p1, m.p2, m.p3, m.p4].forEach(pid => {
+                const p = players.find(x => x.id == pid);
+                if (p) {
+                    p.status = 'Queued';
+                    p.queuedAt = Date.now();
+                    if (!waitingQueue.includes(pid)) waitingQueue.push(pid);
+                }
+            });
+
+            saveToStorage();
+            renderSystem();
+        }
+
         function addPlayer() {
     const inp = document.getElementById('newPlayerName');
     if (!inp.value.trim()) return;
+    const newName = inp.value.trim();
+    // Prevent duplicate names across active and archived players (case-insensitive)
+    const nameExists = players.concat(archivedPlayers).some(p => p.name && p.name.toLowerCase() === newName.toLowerCase());
+    if (nameExists) return alert("A player with that name already exists.");
     const now = new Date();
     const p = { 
         id: Date.now(), 
@@ -448,6 +570,9 @@
         function autoMatchmake() {
     if (waitingQueue.length < 4) return alert("Need at least 4 players in queue");
 
+    const allFull = courts.length > 0 && courts.every(c => c.status === 'Occupied');
+    if (allFull && !allowStagingWhenFull) return alert("All courts are occupied. Enable 'Unlocked' to prepare next matches while courts are full.");
+
     // Map queue IDs back to full player objects
     let queuePool = waitingQueue.map(id => players.find(p => p.id === id));
     
@@ -468,34 +593,59 @@
     // This ensures a deeper pool to scramble from, even with small turnouts
     let sampleSize = Math.min(primarySourcePool.length, 6);
     let candidates = primarySourcePool.slice(0, sampleSize);
-    
-    // 4. Fisher-Yates Shuffle: Thoroughly ramble/scramble the player pool
-    for (let i = candidates.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
+
+    let selectedPlayers;
+    if (gameTimeMode) {
+        // Choose 4 players who are closest together by winrate so we can
+        // form high-high vs high-high or low-low vs low-low matches.
+        selectedPlayers = chooseClosestWinrateGroup(candidates, 4);
+        // fallback
+        if (!selectedPlayers || selectedPlayers.length < 4) {
+            selectedPlayers = candidates.slice(0, 4);
+        }
+    } else {
+        // 4. Fisher-Yates Shuffle: Thoroughly ramble/scramble the player pool
+        for (let i = candidates.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
+        }
+        // Select the first 4 thoroughly mixed players
+        selectedPlayers = candidates.slice(0, 4);
     }
-    
-    // Select the first 4 thoroughly mixed players
-    let selectedPlayers = candidates.slice(0, 4);
 
     // 5. Update global queue structures and player states
     const selectedIds = selectedPlayers.map(p => p.id);
     waitingQueue = waitingQueue.filter(id => !selectedIds.includes(id));
     selectedPlayers.forEach(p => p.status = 'Staged');
 
-    // 6. Build the match deck using balanced team distribution (1+4 vs 2+3)
-    upNextDeck.push({ 
-        id: Date.now(), 
-        p1: selectedPlayers[0].id, 
-        p2: selectedPlayers[3].id, 
-        p3: selectedPlayers[1].id, 
-        p4: selectedPlayers[2].id 
-    });
+    // 6. Build the match deck using current pairing mode
+    const match = buildMatchFromSelected(selectedPlayers);
+    upNextDeck.push(match);
 
     saveToStorage();
     renderSystem();
     processPipeline();
 }
+
+        // Pick a contiguous group of `size` players from `pool` (array of player objects)
+        // that has the smallest winrate range. Returns array of length `size` or []
+        function chooseClosestWinrateGroup(pool, size) {
+            if (!Array.isArray(pool) || pool.length < size) return [];
+            // Sort by winrate descending
+            const sorted = [...pool].sort((a,b) => getWinRate(b) - getWinRate(a));
+            let best = null;
+            let bestRange = Infinity;
+            for (let i = 0; i <= sorted.length - size; i++) {
+                const slice = sorted.slice(i, i + size);
+                const rates = slice.map(p => getWinRate(p));
+                const range = Math.max(...rates) - Math.min(...rates);
+                if (range < bestRange) {
+                    bestRange = range;
+                    best = slice;
+                }
+            }
+            return best || [];
+        }
 
         function processPipeline() {
             const c = courts.find(x => x.status === 'Available');
@@ -713,6 +863,9 @@
         function createManualMatch() {
             const sel = Array.from(document.querySelectorAll('input[name="manualP"]:checked')).map(x => parseInt(x.value));
             if (sel.length !== 4) return alert("Select exactly 4 players");
+
+            const allFull = courts.length > 0 && courts.every(c => c.status === 'Occupied');
+            if (allFull && !allowStagingWhenFull) return alert("All courts are occupied. Enable 'Unlocked' to prepare next matches while courts are full.");
             
             let selectedPlayers = sel.map(id => players.find(x => x.id == id));
             selectedPlayers.forEach(p => {
@@ -720,15 +873,10 @@
                 waitingQueue = waitingQueue.filter(q => q != p.id);
             });
 
-            selectedPlayers.sort((a, b) => getWinRate(b) - getWinRate(a));
-
-            upNextDeck.push({ 
-                id: Date.now(), 
-                p1: selectedPlayers[0].id, 
-                p2: selectedPlayers[3].id, 
-                p3: selectedPlayers[1].id, 
-                p4: selectedPlayers[2].id 
-            });
+            // For manual mode, we use the same pairing helper which will
+            // respect `gameTimeMode` when building teams.
+            const match = buildMatchFromSelected(selectedPlayers);
+            upNextDeck.push(match);
             
             toggleManualCreator();
             saveToStorage();
