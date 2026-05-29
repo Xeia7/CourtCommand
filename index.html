@@ -81,6 +81,7 @@
                         + Add Court
                     </button>
                 </div>
+                <!-- Court selection moved to Up Next Deck header -->
             </div>
             <div id="courts-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
                 </div>
@@ -97,6 +98,12 @@
                                 <i id="upnext-toggle-icon" class="fas fa-lock"></i>
                                 <span id="upnext-toggle-text" class="font-bold">Locked</span>
                             </button>
+                            <div id="court-select-row" class="hidden ml-2 flex items-center gap-2">
+                                <label for="next-match-court" class="text-[10px] uppercase tracking-widest text-slate-400">Court:</label>
+                                <select id="next-match-court" class="text-xs bg-slate-700 dark:bg-slate-900 border border-slate-600 dark:border-slate-800 rounded-xl px-3 py-2 text-slate-100 outline-none">
+                                    <option value="">Auto select available court</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
                     <div id="up-next-container" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -131,6 +138,21 @@
                     <div id="roster-container" class="space-y-3 max-h-[600px] overflow-y-auto custom-scrollbar pr-2">
                         </div>
                 </div>
+                <div id="recent-history-card" class="mt-6 bg-slate-800 dark:bg-slate-950 border border-slate-700 dark:border-slate-800 rounded-3xl p-4">
+                    <div class="flex items-start justify-between gap-3">
+                        <div>
+                            <h3 class="text-sm font-bold uppercase tracking-widest text-slate-400">Recent Match History</h3>
+                            <p class="text-[11px] text-slate-500 mt-1">Showing the 3 most recent matches.</p>
+                        </div>
+                        <button id="toggle-history-btn" onclick="toggleMatchHistoryPanel()" class="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded-lg font-bold transition text-slate-200">
+                            View Match History
+                        </button>
+                    </div>
+                    <div id="recent-history-preview" class="mt-4 space-y-3"></div>
+                </div>
+                <div id="match-history-panel" class="hidden mt-4 bg-slate-900 border border-slate-700 rounded-3xl p-4 overflow-x-auto">
+                    <!-- full match history table renders here -->
+                </div>
             </div>
 
         </div>
@@ -152,6 +174,7 @@
         let allowStagingWhenFull = false;
         // When true, create matches as high-high vs high-high (top2 vs next2)
         let gameTimeMode = false;
+        let historyPanelVisible = false;
 
         // --- PERSISTENCE LAYER LOADER ---
         function loadFromStorage() {
@@ -245,6 +268,8 @@
             renderCourts();
             renderRoster();
             renderUpNext();
+            renderCourtSelection();
+            renderMatchHistoryPreview();
             populateManualSelector();
             updateUpNextToggleUI();
             updateGameTimeUI();
@@ -272,6 +297,99 @@
             gameTimeMode = !gameTimeMode;
             saveToStorage();
             updateGameTimeUI();
+        }
+
+        function renderCourtSelection() {
+            const row = document.getElementById('court-select-row');
+            const select = document.getElementById('next-match-court');
+            if (!row || !select) return;
+            const availableCourts = courts.filter(c => c.status === 'Available');
+            if (courts.length >= 2) {
+                row.classList.remove('hidden');
+                const currentValue = select.value;
+                if (availableCourts.length > 0) {
+                    select.innerHTML = '<option value="">Auto select available court</option>' + availableCourts.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+                    if (currentValue && availableCourts.some(c => String(c.id) === currentValue)) {
+                        select.value = currentValue;
+                    }
+                } else {
+                    select.innerHTML = '<option value="">No courts available right now</option>';
+                }
+            } else {
+                row.classList.add('hidden');
+            }
+        }
+
+        function getSelectedNextCourtId() {
+            const select = document.getElementById('next-match-court');
+            if (!select || !select.value) return null;
+            return parseInt(select.value, 10);
+        }
+
+        function renderMatchHistoryPreview() {
+            const container = document.getElementById('recent-history-preview');
+            if (!container) return;
+            if (matchHistory.length === 0) {
+                container.innerHTML = '<div class="text-xs text-slate-500 italic">No recent matches yet.</div>';
+                return;
+            }
+            const recent = matchHistory.slice(-3).reverse();
+            container.innerHTML = recent.map(h => `
+                <div class="rounded-2xl border border-slate-700/80 bg-slate-950 p-3">
+                    <div class="flex items-center justify-between text-[11px] text-slate-400">
+                        <span>${h.timestamp}</span>
+                        <span>${h.court}</span>
+                    </div>
+                    <div class="mt-2 text-sm font-bold text-slate-100">${h.team1} <span class="text-slate-500">vs</span> ${h.team2}</div>
+                    <div class="mt-1 text-[11px] text-emerald-400">${h.winner} • ${h.duration}m</div>
+                </div>`).join('');
+        }
+
+        function renderFullMatchHistoryPanel() {
+            const panel = document.getElementById('match-history-panel');
+            if (!panel) return;
+            if (matchHistory.length === 0) {
+                panel.innerHTML = '<div class="text-xs text-slate-500 italic">No match history available.</div>';
+                return;
+            }
+            panel.innerHTML = `
+                <div class="overflow-x-auto">
+                    <table class="min-w-full text-left text-[12px] border-separate border-spacing-y-2">
+                        <thead>
+                            <tr class="text-slate-400 uppercase tracking-widest text-[10px]">
+                                <th class="px-3 py-2">Time</th>
+                                <th class="px-3 py-2">Court</th>
+                                <th class="px-3 py-2">Matchup</th>
+                                <th class="px-3 py-2">Winner</th>
+                                <th class="px-3 py-2">Duration</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${matchHistory.slice().reverse().map(h => `
+                                <tr class="border-t border-slate-700/60">
+                                    <td class="px-3 py-2 text-slate-200">${h.timestamp}</td>
+                                    <td class="px-3 py-2 text-slate-200">${h.court}</td>
+                                    <td class="px-3 py-2 text-slate-200">${h.team1} vs ${h.team2}</td>
+                                    <td class="px-3 py-2 text-emerald-400">${h.winner}</td>
+                                    <td class="px-3 py-2 text-slate-200">${h.duration}m</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        function toggleMatchHistoryPanel() {
+            const panel = document.getElementById('match-history-panel');
+            const button = document.getElementById('toggle-history-btn');
+            if (!panel || !button) return;
+            historyPanelVisible = !historyPanelVisible;
+            panel.classList.toggle('hidden', !historyPanelVisible);
+            button.innerText = historyPanelVisible ? 'Hide Match History' : 'View Match History';
+            if (historyPanelVisible) {
+                renderFullMatchHistoryPanel();
+            }
         }
 
         function updateUpNextToggleUI() {
@@ -598,19 +716,28 @@
     if (gameTimeMode) {
         // Choose 4 players who are closest together by winrate so we can
         // form high-high vs high-high or low-low vs low-low matches.
-        selectedPlayers = chooseClosestWinrateGroup(candidates, 4);
-        // fallback
+        selectedPlayers = chooseClosestWinrateGroup(candidates, 4, true);
+        // fallback to the best winrate window if a unique lineup is unavailable
         if (!selectedPlayers || selectedPlayers.length < 4) {
-            selectedPlayers = candidates.slice(0, 4);
+            selectedPlayers = chooseClosestWinrateGroup(candidates, 4, false) || candidates.slice(0, 4);
         }
     } else {
-        // 4. Fisher-Yates Shuffle: Thoroughly ramble/scramble the player pool
-        for (let i = candidates.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
+        // 4. Attempt several random mixes and avoid already-played teams
+        for (let attempt = 0; attempt < 30; attempt++) {
+            const shuffled = [...candidates];
+            for (let i = shuffled.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            }
+            const candidateGroup = shuffled.slice(0, 4);
+            if (!havePlayedTogether(candidateGroup.map(p => p.id))) {
+                selectedPlayers = candidateGroup;
+                break;
+            }
         }
-        // Select the first 4 thoroughly mixed players
-        selectedPlayers = candidates.slice(0, 4);
+        if (!selectedPlayers) {
+            selectedPlayers = candidates.slice(0, 4);
+        }
     }
 
     // 5. Update global queue structures and player states
@@ -629,7 +756,7 @@
 
         // Pick a contiguous group of `size` players from `pool` (array of player objects)
         // that has the smallest winrate range. Returns array of length `size` or []
-        function chooseClosestWinrateGroup(pool, size) {
+        function chooseClosestWinrateGroup(pool, size, avoidPlayed = false) {
             if (!Array.isArray(pool) || pool.length < size) return [];
             // Sort by winrate descending
             const sorted = [...pool].sort((a,b) => getWinRate(b) - getWinRate(a));
@@ -637,6 +764,7 @@
             let bestRange = Infinity;
             for (let i = 0; i <= sorted.length - size; i++) {
                 const slice = sorted.slice(i, i + size);
+                if (avoidPlayed && havePlayedTogether(slice.map(p => p.id))) continue;
                 const rates = slice.map(p => getWinRate(p));
                 const range = Math.max(...rates) - Math.min(...rates);
                 if (range < bestRange) {
@@ -647,9 +775,23 @@
             return best || [];
         }
 
+        function getMatchSignature(ids) {
+            return ids.slice().sort((a, b) => a - b).join(',');
+        }
+
+        function havePlayedTogether(ids) {
+            const signature = getMatchSignature(ids);
+            return matchHistory.some(h => h.playerIds && getMatchSignature(h.playerIds) === signature);
+        }
+
         function processPipeline() {
-            const c = courts.find(x => x.status === 'Available');
-            if (c && upNextDeck.length > 0) fillCourtFromStaged(c.id);
+            if (upNextDeck.length === 0) return;
+            const preferredCourtId = getSelectedNextCourtId();
+            let c = courts.find(x => x.status === 'Available' && x.id === preferredCourtId);
+            if (!c) {
+                c = courts.find(x => x.status === 'Available');
+            }
+            if (c) fillCourtFromStaged(c.id);
         }
 
         function fillCourtFromStaged(cId) {
@@ -685,6 +827,7 @@
 
             const durationMin = Math.round((Date.now() - m.startTime) / 60000);
             
+            const sortedMatchIds = [...activeMatchIds].sort((a, b) => a - b);
             // Record to history before clearing
             matchHistory.push({
                 timestamp: new Date().toLocaleTimeString(),
@@ -694,7 +837,8 @@
                 winner: winner === 1 ? 'Team 1' : 'Team 2',
                 duration: durationMin,
                 playerWaits: m.waitLog.map(l => `${l.name}: ${l.waitTime}m`).join('; '),
-                waitData: m.waitLog // Keep object for analysis
+                waitData: m.waitLog, // Keep object for analysis
+                playerIds: sortedMatchIds
             });
 
             players.forEach(p => {
@@ -867,6 +1011,13 @@
             const allFull = courts.length > 0 && courts.every(c => c.status === 'Occupied');
             if (allFull && !allowStagingWhenFull) return alert("All courts are occupied. Enable 'Unlocked' to prepare next matches while courts are full.");
             
+            const selectedIds = [...sel].sort((a,b) => a - b);
+            if (havePlayedTogether(selectedIds)) {
+                if (!confirm("These four players have already been matched together in the same lineup. Continue anyway?")) {
+                    return;
+                }
+            }
+
             let selectedPlayers = sel.map(id => players.find(x => x.id == id));
             selectedPlayers.forEach(p => {
                 p.status = 'Staged';
