@@ -293,6 +293,31 @@
             };
         }
 
+        function formatLiveDuration(ms) {
+            const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+            const hours = Math.floor(totalSeconds / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            const seconds = totalSeconds % 60;
+            if (hours > 0) {
+                return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            }
+            return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        function getPlayerStatusDetail(p) {
+            if (!p) return '';
+            if (p.status === 'Queued') {
+                const waitMs = Date.now() - (p.queuedAt || Date.now());
+                const label = p.justPlayed ? 'Just played' : 'Waiting';
+                return `${label} ${formatLiveDuration(waitMs)}`;
+            }
+            if (p.status === 'Idle') {
+                const idleMs = p.idleStartedAt ? Date.now() - p.idleStartedAt : 0;
+                return `Idle ${formatLiveDuration(idleMs)}`;
+            }
+            return '';
+        }
+
         function toggleTheme() {
             isDarkMode = !isDarkMode;
             applyThemeClasses();
@@ -760,9 +785,9 @@
             <div class="${themeCardBg} border p-3 rounded-2xl flex justify-between items-center">
                 <div>
                     <div class="font-bold text-sm ${themeTextMain}">
-                        ${p.name} 
+                        ${p.name}
                         <span class="text-[10px] ${p.status === 'Idle' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' : themeTextBadges} px-1.5 py-0.5 rounded font-normal ml-1">${p.status}</span>
-                        ${p.justPlayed ? `<span class="text-[9px] bg-amber-500/10 border border-amber-500/30 text-amber-400 px-1.5 py-0.5 rounded font-normal ml-1">Just Played</span>` : ''}
+                        ${getPlayerStatusDetail(p) ? `<span class="text-[9px] text-slate-400 font-normal ml-2">${getPlayerStatusDetail(p)}</span>` : ''}
                     </div>
                     <div class="text-[10px] text-slate-400 uppercase font-bold mt-0.5">
                         ${p.wins}W / ${p.games - p.wins}L • <span class="text-emerald-500">${getWinRate(p)}% Winrate</span>
@@ -1768,7 +1793,7 @@ function checkOutAllPlayers() {
             }
         }, 1000);
         
-        setInterval(renderRoster, 30000);
+        setInterval(renderRoster, 1000);
     </script>
 </body>
 </html>
