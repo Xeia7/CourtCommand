@@ -1820,7 +1820,15 @@ function checkOutAllPlayers() {
 closeExportModal();
 const exportDate = new Date().toLocaleDateString();
 
+// Ensure everyone is included: active players, archived/checked-out players
+const completeRoster = [...players, ...archivedPlayers];
+
 let waitMap = {};
+// Initialize waitMap for every player in the roster to ensure they appear in the summary
+completeRoster.forEach(p => {
+    waitMap[p.name] = { total: 0, count: 0 };
+});
+
 matchHistory.forEach(h => {
     if (h.waitData) {
         h.waitData.forEach(pWait => {
@@ -1833,12 +1841,8 @@ matchHistory.forEach(h => {
 
 const waitAverages = Object.keys(waitMap).map(name => ({
     name,
-    avg: Math.round(waitMap[name].total / waitMap[name].count)
+    avg: waitMap[name].count > 0 ? Math.round(waitMap[name].total / waitMap[name].count) : 0
 })).sort((a,b) => b.avg - a.avg);
-
-// Ensure everyone is included: active players, archived/checked-out players,
-// and anyone who might only exist in match history but isn't in those arrays (rare but safe)
-const completeRoster = [...players, ...archivedPlayers];
 
 // Helper function to pull structural idle times safely
 function getIdleDurationMin(p) {
