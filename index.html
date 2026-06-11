@@ -1713,6 +1713,36 @@ const pIndex = players.findIndex(p => p.id == id);
 if (pIndex !== -1) {
     const targetPlayer = players[pIndex];
 
+    // Check if player is in queue or playing
+    const isInQueue = waitingQueue.includes(id);
+    const playingCourt = courts.find(c => c.currentMatch &&
+        (c.currentMatch.p1 == id || c.currentMatch.p2 == id || c.currentMatch.p3 == id || c.currentMatch.p4 == id));
+
+    if (isInQueue || playingCourt) {
+        let msg = `Player "${targetPlayer.name}" is currently `;
+        if (isInQueue && playingCourt) msg += "queued and playing on " + playingCourt.name;
+        else if (isInQueue) msg += "in the queue";
+        else msg += "playing on " + playingCourt.name;
+        msg += ". Are you sure you want to check them out?";
+
+        if (!confirm(msg)) return;
+
+        // If playing, remove them from the court match by nulling their spot
+        if (playingCourt) {
+            if (playingCourt.currentMatch.p1 == id) playingCourt.currentMatch.p1 = null;
+            if (playingCourt.currentMatch.p2 == id) playingCourt.currentMatch.p2 = null;
+            if (playingCourt.currentMatch.p3 == id) playingCourt.currentMatch.p3 = null;
+            if (playingCourt.currentMatch.p4 == id) playingCourt.currentMatch.p4 = null;
+
+            // If all players are gone, clear the court
+            const m = playingCourt.currentMatch;
+            if (!m.p1 && !m.p2 && !m.p3 && !m.p4) {
+                playingCourt.status = "Available";
+                playingCourt.currentMatch = null;
+            }
+        }
+    }
+
     // Final check: if they left while marked idle, close out their idle timer
     if (targetPlayer.status === 'Idle' && targetPlayer.idleStartedAt) {
         targetPlayer.totalIdleMs += (Date.now() - targetPlayer.idleStartedAt);
