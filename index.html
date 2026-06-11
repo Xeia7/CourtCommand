@@ -1760,15 +1760,50 @@ renderSystem();
 }
 
 function checkOutAllPlayers() {
-if (players.length === 0) return alert("No active players to check out.");
-if (!confirm("Are you sure you want to check out all remaining active players to end open play?")) return;
+    if (players.length === 0) return alert("No active players to check out.");
+    if (!confirm("Are you sure you want to check out all remaining active players to end open play?")) return;
 
-// Copy the roster to process each player safely
-const activePlayersList = [...players];
-activePlayersList.forEach(p => {
-    removePlayer(p.id);
-});
-alert("All remaining players have been checked out successfully.");
+    // Use a modified version of removal that skips internal confirms
+    const now = Date.now();
+    const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    // We process the list in reverse to avoid splice issues if we weren't copying,
+    // but here we just iterate and perform the state moves manually to be fast and quiet.
+    while (players.length > 0) {
+        const p = players[0];
+
+        // Handle idle timer closure
+        if (p.status === 'Idle' && p.idleStartedAt) {
+            p.totalIdleMs = (p.totalIdleMs || 0) + (now - p.idleStartedAt);
+            p.idleStartedAt = null;
+        }
+
+        // Clean up playing status if on court
+        const playingCourt = courts.find(c => c.currentMatch &&
+            (c.currentMatch.p1 == p.id || c.currentMatch.p2 == p.id || c.currentMatch.p3 == p.id || c.currentMatch.p4 == p.id));
+        if (playingCourt) {
+            if (playingCourt.currentMatch.p1 == p.id) playingCourt.currentMatch.p1 = null;
+            if (playingCourt.currentMatch.p2 == p.id) playingCourt.currentMatch.p2 = null;
+            if (playingCourt.currentMatch.p3 == p.id) playingCourt.currentMatch.p3 = null;
+            if (playingCourt.currentMatch.p4 == p.id) playingCourt.currentMatch.p4 = null;
+            const m = playingCourt.currentMatch;
+            if (!m.p1 && !m.p2 && !m.p3 && !m.p4) {
+                playingCourt.status = "Available";
+                playingCourt.currentMatch = null;
+            }
+        }
+
+        p.checkOutTime = timeStr;
+        p.checkOutEpoch = now;
+        p.status = 'CheckedOut'; // Visual marker for history/reports
+        archivedPlayers.push(p);
+        players.splice(0, 1);
+    }
+
+    waitingQueue = [];
+    saveToStorage();
+    renderSystem();
+    alert("All players have been checked out.");
 }
 
     // --- EXPORT FUNCTIONS ---
@@ -1801,6 +1836,8 @@ const waitAverages = Object.keys(waitMap).map(name => ({
     avg: Math.round(waitMap[name].total / waitMap[name].count)
 })).sort((a,b) => b.avg - a.avg);
 
+// Ensure everyone is included: active players, archived/checked-out players,
+// and anyone who might only exist in match history but isn't in those arrays (rare but safe)
 const completeRoster = [...players, ...archivedPlayers];
 
 // Helper function to pull structural idle times safely
